@@ -1,12 +1,18 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Adobe Acrobat Reader DC (US English) for Intune deployment.
+        Packages the latest VMware Horizin Client for MEM (aka Intune) deployment.
         Uploads the mew package into the target Intune tenant.
+     
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
+        
+        The installation command is customized using the -SupplementalInstallCmd parameter to add a default view server. You should manually adjust this yourself as this is not a parameter.
+    
+    .PARAMETER Path
+    Path for temporary files
+    
 #>
 [CmdletBinding()]
 Param (
@@ -44,7 +50,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "vmware-view.exe",
 
-    $IconSource = "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png"
+    $IconSource = "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png",
+    
+    $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>"
 
 )
 
@@ -134,7 +142,7 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart VDM_SERVER=<VIEW.COMPANYNAME.COM>"
+    $InstallCommandLine = ".\$Executable /silent /norestart $SupplementalInstallCmd"
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 
