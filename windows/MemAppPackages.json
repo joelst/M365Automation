@@ -1,26 +1,21 @@
 {
  
  "packages":  [ {
-        "app":"AdobeAcrobatReaderDC",
+        "PackageId":"Adobe.AcrobatReaderDC",
+        "PackageName":"Adobe Acrobat Reader DC",
         "IconSource": "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png",
-        "Win32Wrapper": "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe",
-        "InformationURL": "https://helpx.adobe.com/en/acrobat/release-note/release-notes-acrobat-reader.html",
-        "PrivacyURL": "https://www.adobe.com/privacy.html",
         "ProductCode": "{AC76BA86-1033-1033-7760-BC15014EA700}",
         "AppPath": "$env:ProgramFiles\\Adobe\\Acrobat DC\\Acrobat",
-        "AppExecutable": "Acrobat.exe",
-        "Arch": "x64"
+        "AppExecutable": "Acrobat.exe"
     },
     {
-        "app":"VMwareHorizonClient",
+        "PackageId":"VMware.HorizonClient",
+        "PackageName":"VMware Horizon Client",
         "IconSource": "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png",
-        "Win32Wrapper": "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe",
-        "InformationURL": "https://www.vmware.com/products/horizon.html",
-        "PrivacyURL": "https://www.vmware.com/help/privacy.html",
         "ProductCode": "{XXXXXXX}",
         "AppPath": "$env:ProgramFiles\\Vmware\\HorizonClientxxx",
-        "AppExecutable": "xxxHorizoneClient.exe",
-        "Arch": "x64"
+        "AppExecutable": "HorizoneClient.exe"
+
     }
 ]
 }

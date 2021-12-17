@@ -6,136 +6,235 @@
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
 #>
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory = $False)]
-    [System.String] $Path = "C:\Temp\Reader",
+    [System.String] $Path = "D:\MEMApp\AdobeReader",
 
     [Parameter(Mandatory = $False)]
-    [System.String] $ScriptName = "Install-Reader.ps1",
+    [System.String] $PackageOutputPath = "D:\MEMAppOut\AdobeReader",
 
     [Parameter(Mandatory = $False)]
-    [ValidateSet("System","User")]
-    $InstallExperience = "User",
-    
-
-    [Parameter(Mandatory = $False)]
-    [ValidateSet("Neutral", "Multi")]
-    [System.String] $Language = "Neutral",
+    [System.String] $ScriptName = "Install-Package.ps1",
 
     [Parameter(Mandatory = $False)]
     [System.String] $TenantName = "placeholder.onmicrosoft.com",
 
     [Parameter(Mandatory = $False)]
-    [System.Management.Automation.SwitchParameter] $Upload
+    [System.Management.Automation.SwitchParameter] $Upload,
+
+    [Parameter(Mandatory = $False)]
+    $PackageName = "Adobe Acrobat Reader",
+    
+    [Parameter(Mandatory = $False)]
+    $PackageId = "Adobe.Acrobat.Reader.64-bit",
+    
+    [Parameter(Mandatory = $False)]
+    $ProductCode = "{AC76BA86-1033-1033-7760-BC15014EA700}",
+    
+    [Parameter(Mandatory = $False)]
+    [ValidateSet("System","User")]
+    $InstallExperience = "User",
+    
+    [Parameter(Mandatory = $False)]
+    $AppPath = "$env:ProgramFiles\Adobe\Acrobat DC\Acrobat",
+    
+    [Parameter(Mandatory = $False)]
+    $AppExecutable = "Acrobat.exe",
+
+    $IconSource = "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png"
+    
 )
+    
+$Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
 
 #region Check if token has expired and if, request a new
 Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token for tenant: $TenantName."
 If ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
-    $TokenExpireMins = ($Global:AccessToken.ExpiresOn.DateTime - $UtcDateTime).Minutes
-    Write-Warning -Message "Current authentication token expires in (minutes): $($TokenExpireMins)"
+    [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
+    $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
+    Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
 
-    If ($TokenExpireMins -le 0) {
-        Write-Host -ForegroundColor "Cyan" "Existing token found but has expired, requesting a new token."
-        $Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
+    If ($TokenExpireMins -le 1) {
+        Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
+        
+        $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
+        #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
     }
-    Else {
+    else {
         Write-Host -ForegroundColor "Cyan" "Existing authentication token has not expired, will not request a new token."
     }        
 }
-Else {
+else {
     Write-Host -ForegroundColor "Cyan" "Authentication token does not exist, requesting a new token."
-    $Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName -PromptBehavior "Auto"
+    $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
+    #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName -PromptBehavior "Auto"
+    $UtcDateTime = (Get-Date).ToUniversalTime()
+    [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
+    $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
+    Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
+
+    If ($TokenExpireMins -le 1) {
+        Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
+        
+        $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
+        #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
+    }
 }
 #endregion
 
-# Create a package for each language listed in $Language
-ForEach ($Lang in $Language) {
-
     #region Variables
-    Write-Host -ForegroundColor "Cyan" "Getting Adobe Acrobat Reader DC updates via Evergreen."
+    Write-Host -ForegroundColor "Cyan" "Getting $PackageName updates via Winget."
     $ProgressPreference = "SilentlyContinue"
     $InformationPreference = "Continue"
-    $IconSource = "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png"
-    $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
 
-    $Package = Get-EvergreenApp -Name "AdobeAcrobat" | Where-Object { $_.Product -eq "Reader" -and $_.Track -eq "DC" -and $_.Language -eq "Neutral" } | Select-Object -First 1
-    $res = Export-EvergreenManifest -Name "AdobeAcrobat"
+
+$packageInfo = winget show $PackageId | ConvertFrom-String -Delimiter ": " -PropertyNames "Detail","Value"
+    foreach ($info in $packageInfo)
+    {
+        if ($info.Detail.Trim() -eq "Version")
+        {
+            $PackageVersion = $info.Value.Trim()
+            Write-Output "  PackageVersion = $PackageVersion"
+        }
+        if ($info.Detail.Trim() -eq "Publisher")
+        {
+            $Publisher = $info.Value.Trim()
+            Write-Output "  Publisher = $Publisher"
+        }
+        if ($info.Detail.Trim() -eq "Publisher Url")
+        {
+            $PublisherUrl = $info.Value.Trim()
+            Write-Output "  PublisherURL = $PublisherUrl"
+        }
+        if ($info.Detail.Trim() -eq "Description")
+        {
+           $Description = $info.Value.Trim()
+            Write-Output "  Description = $Description"
+        }
+        if ($info.Detail.Trim() -eq "Privacy Url")
+        {
+            $PrivacyURL = $info.Value.Trim()
+            Write-Output "  PrivacyUrl = $PrivacyUrl"
+        }
+        if ($info.Detail.Trim() -eq "Download Url")
+        {
+            $DownloadUrl = $info.Value.Trim()
+            Write-Output "  DownloadUrl = $DownloadUrl"
+        }
+        if ($info.Detail.Trim() -eq "Homepage")
+        {
+            $InformationURL = $info.Value.Trim()
+            Write-Output "  InfomationUrl = $InformationUrl"
+        }
+        if ($info.Detail.Trim() -eq "Homepage")
+        {
+            $InformationURL = $info.Value.Trim()
+            Write-Output "  InfomationUrl = $InformationUrl"
+        }
+    }
     
     # Variables for the package
-    $Description = "The leading PDF viewer to print, sign, and annotate PDFs"
-    $Publisher = "Adobe"
-    $DisplayName = $res.Name + " Update " + $Package.Version
-    $Executable = Split-Path -Path $Package.Uri -Leaf
-    $InformationURL = "https://helpx.adobe.com/au/acrobat/release-note/release-notes-acrobat-reader.html"
-    $PrivacyURL = "https://www.adobe.com/privacy.html"
+    $DisplayName = $PackageName ##+ " " + $PackageVersion
 
-    $ProductCode = "{AC76BA86-1033-1033-7760-BC15014EA700}"
-    $AppPath = "$env:ProgramFiles\Adobe\Acrobat DC\Acrobat"
-    $AppExecutable = "Acrobat.exe"
+    Write-Output "`n  Creating Package: $DisplayName"
+    $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $ProductCode = "{AC76BA86-7AD7-1033-7B44-AC0F074E4100}"
-    $AppPath = "${env:ProgramFiles(x86)}\Adobe\Acrobat Reader DC\Reader"
-    $AppExecutable = "AcroRd32.exe"
-
-    $InstallCommandLine = "msiexec.exe /Update .\$Executable /Quiet"
+    $InstallCommandLine = ".\$Executable AcroRdrDCx642100720099_en_US.exe -sfx_nu /sALL /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1"
     $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
-    #endregion
+    #To_Automate region
 
+#endregion
+    Write-Host "    Checking to see if $PackageName $PackageVersion has already been created in MEM..."
+    $existingPackages = Get-IntuneWin32App -DisplayName $PackageName | Where-Object {$_.DisplayVersion -eq $PackageVersion} | Select-Object -First 1
 
-    # Download installer with Evergreen
-    If ($Package) {
+    if (-not $existingPackages -eq '')
+    {
+        Write-Host "        Package already exists, exiting process!"
+        exit
+    }
+    else {
+        Write-Host "        Package does not exist, creating package now!"
+    }
+
+    # Download installer with winget
+    If ($PackageName) {
  
+        # Test to make sure the paths we need are available.
+        If ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true)
+        {
+            $null = New-Item -Path $path -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
+        }
+
+        If ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true)
+        {
+           $null =  New-Item -Path $PackageOutputPath -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
+        }
+
         # Create the package folder
         $PackagePath = Join-Path -Path $Path -ChildPath "Package"
-        Write-Host -ForegroundColor "Cyan" "Package path: $PackagePath."
+        Write-Host -ForegroundColor "Cyan" "    Package path: $PackagePath"
         If (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
-        $PackageOutput = Join-Path -Path $Path -ChildPath "Output"
-        Write-Host -ForegroundColor "Cyan" "Output path: $PackageOutput."
+        $PackageOutputPath = Join-Path -Path $PackageOutputPath -ChildPath "Output"
+        Write-Host -ForegroundColor "Cyan" "    Output path: $PackageOutputPath"
 
         #region Download files and setup the package
-        # Grab the most recent installer and update objects in case there happens to be more than one        
-        # Download the Adobe Reader installer
-        $OutFile = Save-EvergreenApp -InputObject $Package -Path $PackagePath
-        #endregion
-    
+   
+        #region Package the app
+        # Download the Package
+        # TODO - Check the hash to make sure the file is valid
+        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $PackagePath -Leaf)"
+        $packageFile = Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)
+        try {
+            Invoke-WebRequest -Uri $DownloadUrl -OutFile $packageFile -UseBasicParsing
+        }
+        catch [System.Exception] {
+            Write-Error -Message "MEM Win32 Content Prep tool failed with: $($_.Exception.Message)"
+            Break
+        }
+
         #region Package the app
         # Download the Intune Win32 wrapper
+        # TODO: Check if already available and skip download if it is.
+        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $Win32Wrapper -Leaf)"
         $wrapperBin = Join-Path -Path $Path -ChildPath (Split-Path -Path $Win32Wrapper -Leaf)
         try {
             Invoke-WebRequest -Uri $Win32Wrapper -OutFile $wrapperBin -UseBasicParsing
         }
         catch [System.Exception] {
-            Write-Error -Message "Failed to Microsoft Win32 Content Prep Tool with: $($_.Exception.Message)"
+            Write-Error -Message "MEM Win32 Content Prep tool failed with: $($_.Exception.Message)"
             Break
         }
 
         # Create the package
+        Write-Host -ForegroundColor "Cyan" " Package path: $(Split-Path -Path $packageFile -Parent)"
+        Write-Host -ForegroundColor "Cyan" " Update path: $packageFile"
+        $ArgList = "-c $(Split-Path -Path $packageFile -Parent) -s $packageFile -o $PackageOutputPath -q"
+        Write-Host "  Argument list: $ArgList"
+
         try {
-            Write-Host -ForegroundColor "Cyan" "Package path: $(Split-Path -Path $OutFile.Path -Parent)."
-            Write-Host -ForegroundColor "Cyan" "Update path:  $($OutFile.Path)."
+           
             $params = @{
                 FilePath     = $wrapperBin
-                ArgumentList = "-c $(Split-Path -Path $OutFile.Path -Parent) -s $($OutFile.Path) -o $PackageOutput -q"
+                ArgumentList = $ArgList
                 Wait         = $True
                 PassThru     = $True
                 NoNewWindow  = $True
             }
+            Write-Host " Executing: $process = Start-Process @params"
             $process = Start-Process @params
         }
         catch [System.Exception] {
-            Write-Error -Message "Failed to convert to an Intunewin package with: $($_.Exception.Message)"
+            Write-Error -Message "Failed to create MEM package with: $($_.Exception.Message)"
             Break
         }
         try {
-            $IntuneWinFile = Get-ChildItem -Path $PackageOutput -Filter "*.intunewin" -ErrorAction "SilentlyContinue"
+            $IntuneWinFile = Get-ChildItem -Path $PackageOutputPath -Filter "*.intunewin" -ErrorAction "SilentlyContinue" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
         }
         catch {
-            Write-Error -Message "Failed to find an Intunewin package in $PackageOutput with: $($_.Exception.Message)"
+            Write-Error -Message "Failed to find an Intunewin package in $PackageOutputPath with: $($_.Exception.Message)"
             Break
         }
         Write-Host -ForegroundColor "Cyan" "Found package: $($IntuneWinFile.FullName)."
@@ -161,17 +260,17 @@ ForEach ($Lang in $Language) {
         }
 
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $Package.Version) {
+        If ($ProductCode -and $PackageVersion) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = "greaterThanOrEqual"
-                #ProductVersion         = $Package.Version
+                #ProductVersion         = $PackageVersion
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
         }
         Else {
             Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
-            Write-Host -ForegroundColor "Cyan" "Version: $($Package.Version)."
+            Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
             Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
             Break
         }
@@ -182,7 +281,7 @@ ForEach ($Lang in $Language) {
                 FileOrFolder         = $AppExecutable
                 Check32BitOn64System = $False 
                 Operator             = "greaterThanOrEqual"
-                VersionValue         = $Package.Version
+                VersionValue         = $PackageVersion
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
         }
@@ -225,11 +324,11 @@ ForEach ($Lang in $Language) {
                     RequirementRule          = $RequirementRule
                     InstallCommandLine       = $InstallCommandLine
                     UninstallCommandLine     = $UninstallCommandLine
+                    AppVersion               = $PackageVersion
                     Icon                     = $Icon
                     Verbose                  = $true
-
                 }
-                $App = Add-IntuneWin32App @params
+                $null = Add-IntuneWin32App @params
             }
             catch [System.Exception] {
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
@@ -264,11 +363,10 @@ ForEach ($Lang in $Language) {
             #>
         }
         Else {
-            Write-Warning -Message "Parameter -Upload not specified. Skipping upload to Intune."
+            Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
         }
         #endregion
     }
     Else {
-        Write-Error -Message "Failed to retrieve Adobe Acrobat Reader update package via Evergreen."
+        Write-Error -Message "Failed to retrieve $Package update package via Evergreen."
     }
-}
