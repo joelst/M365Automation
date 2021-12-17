@@ -134,7 +134,7 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart VDM_SERVER=view.serviceassistant.com"
+    $InstallCommandLine = ".\$Executable /silent /norestart VDM_SERVER=<VIEW.COMPANYNAME.COM>"
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 
