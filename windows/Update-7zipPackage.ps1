@@ -1,18 +1,12 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest VMware Horizon Client for MEM (aka Intune) deployment.
+        Packages the latest 7-Zip for MEM (Intune) deployment.
         Uploads the mew package into the target Intune tenant.
-     
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        
-        The installation command is customized using the -SupplementalInstallCmd parameter to add a default view server. You should manually adjust this yourself as this is not a parameter.
-    
-    .PARAMETER Path
-    Path for temporary files
-    
+        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
 #>
 [CmdletBinding()]
 Param (
@@ -30,32 +24,30 @@ Param (
 
     [Parameter(Mandatory = $False)]
     [System.Management.Automation.SwitchParameter] $Upload,
-   
+
+    [Parameter(Mandatory = $False)]
+    $PackageName = "7-Zip",
+    
+    [Parameter(Mandatory = $False)]
+    $PackageId = "7zip.7zip",
+    
+    [Parameter(Mandatory = $False)]
+    $ProductCode = "{23170F69-40C1-2702-2106-000001000000}",
+    
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
     $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
-    $PackageName = "VMware Horizon Client",
+    $AppPath = "$env:ProgramFiles\7-zip\",
     
     [Parameter(Mandatory = $False)]
-    $PackageId = "Vmware.HorizonClient",
-    
-    [Parameter(Mandatory = $False)]
-    $ProductCode = "{9F959D5E-DF9C-4AC4-88C3-261EB45A4C38}",
-    
-    [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles(x86)}\VMware\VMware Horizon View Client\",
-    
-    [Parameter(Mandatory = $False)]
-    $AppExecutable = "vmware-view.exe",
+    $AppExecutable = "7z.exe",
 
-    $IconSource = "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png",
+    $IconSource = "https://image.apphit.com/image/7-zip/7zip-logo.png"
     
-    $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>"
-
 )
-
+    
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
 
 #Create subfolders for this package
@@ -68,16 +60,20 @@ If ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
     [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
     $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
-    Write-Warning -Message "Current authentication token expires in (minutes): $($TokenExpireMins)"
+    Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
 
-    If ($TokenExpireMins -le 1) {
+    If ($TokenExpireMins -le 2) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
         
         $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
+        $UtcDateTime = (Get-Date).ToUniversalTime()
+        [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
+        $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
+        Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
         #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
     }
     else {
-        Write-Host -ForegroundColor "Cyan" "Existing authentication token has not expired, will not request a new token."
+        Write-Verbose "Existing authentication token is okay."
     }        
 }
 else {
@@ -92,9 +88,13 @@ else {
     Write-Host -ForegroundColor "Cyan" "Getting $PackageName updates via Winget."
     $ProgressPreference = "SilentlyContinue"
     $InformationPreference = "Continue"
-    
-
-    $packageInfo = winget show $PackageId
+    $PackageVersion = ""
+    $Publisher = ""
+    $PublisherUrl = ""
+    $Description = ""
+    $InformationURL = ""
+    $PrivacyURL = ""
+    $packageInfo = winget show $PackageId 
     foreach ($info in $packageInfo)
     {
         try{ 
@@ -125,9 +125,27 @@ else {
             $Description = $value
             Write-Verbose "  Description = $Description"
         }
+        if ($key -eq "Homepage")
+        {
+            if($value -eq "")
+            {
+                $InformationURL = "https://bing.com/$packageName"
+            }
+            else{
+                $InformationURL = $value
+            }
+            
+            Write-Verbose "  InfomationUrl = $InformationUrl"
+        }
         if ($key -eq "Privacy Url")
         {
+            if ("" -eq $value) {
+                $PrivacyURL = $InformationURL
+        }
+        else{
             $PrivacyURL = $value
+        }
+            
             Write-Verbose "  PrivacyUrl = $PrivacyUrl"
         }
         if ($key -eq "Download Url")
@@ -135,24 +153,26 @@ else {
             $DownloadUrl = $value
             Write-Verbose "  DownloadUrl = $DownloadUrl"
         }
-        if ($key -eq "Homepage")
-        {
-            $InformationURL = $value
-            Write-Verbose "  InfomationUrl = $InformationUrl"
-        }
+
     }
     
+if ($PrivacyURL -eq "")
+{
+    $PrivacyURL = $InformationURL
+    Write-Verbose "  PrivacyUrl = $PrivacyUrl"
+}
+
     # Variables for the package
     $DisplayName = $PackageName ##+ " " + $PackageVersion
 
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart $SupplementalInstallCmd"
-    $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
+    $InstallCommandLine = ".\$Executable /silent"
+    $UninstallCommandLine = ".\$Executable --uninstall --silent"
     #To_Automate region
 
-    #endregion
+#endregion
     Write-Host "    Checking to see if $PackageName $PackageVersion has already been created in MEM..."
     $existingPackages = Get-IntuneWin32App -DisplayName $PackageName | Where-Object {$_.DisplayVersion -eq $PackageVersion} | Select-Object -First 1
 
@@ -265,21 +285,24 @@ else {
             Break
         }
 
+        $DetectionRules = @()
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $PackageVersion) {
+        if ($ProductCode -and $PackageVersion) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = "greaterThanOrEqual"
                 #ProductVersion         = $PackageVersion
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
+            $DetectionRules += $DetectionRule1
         }
-        Else {
+        else {
             Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
             Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
-            Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
-            Break
+            Write-Warning -Message "Cannot create the detection rule - check ProductCode and version number."
+
         }
+
         If ($AppPath -and $AppExecutable) {
             $params = @{
                 Version              = $True
@@ -290,20 +313,22 @@ else {
                 VersionValue         = $PackageVersion
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
+            $DetectionRules += $DetectionRule2
         }
-        Else {
-            Write-Error -Message "Cannot create the detection rule - check application path and executable."
+        else {
+            Write-Warning -Message "Cannot create the detection rule - check application path and executable."
             Write-Host -ForegroundColor "Cyan" "Path: $AppPath."
             Write-Host -ForegroundColor "Cyan" "Exe: $AppExecutable."
-            Break
+
         }
-        If ($DetectionRule1 -and $DetectionRule2) {
-            $DetectionRule = @($DetectionRule1, $DetectionRule2)
-        }
-        Else {
-            Write-Error -Message "Failed to create the detection rule."
-            Break
-        }
+
+        # If ($DetectionRule1 -and $DetectionRule2) {
+        #     $DetectionRule = @($DetectionRule1, $DetectionRule2)
+        # }
+        # Else {
+        #     Write-Error -Message "Failed to create the detection rule."
+        #     Break
+        # }
     
         # Create custom requirement rule
         $params = @{
@@ -311,6 +336,7 @@ else {
             MinimumSupportedOperatingSystem = "1607"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
+
 
         # Add new EXE Win32 app
         # Requires a connection via Connect-MSIntuneGraph first
@@ -326,15 +352,15 @@ else {
                     CompanyPortalFeaturedApp = $false
                     InstallExperience        = $InstallExperience
                     RestartBehavior          = "suppress"
-                    DetectionRule            = $DetectionRule
+                    DetectionRule            = $DetectionRules
                     RequirementRule          = $RequirementRule
                     InstallCommandLine       = $InstallCommandLine
                     UninstallCommandLine     = $UninstallCommandLine
                     AppVersion               = $PackageVersion
                     Icon                     = $Icon
                     Verbose                  = $true
-
                 }
+                $params | Write-Output
                 $null = Add-IntuneWin32App @params
             }
             catch [System.Exception] {

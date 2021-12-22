@@ -1,20 +1,20 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Adobe Acrobat Reader DC (US English) for Intune deployment.
+        Packages the latest Dialpad for MEM (Intune) deployment.
         Uploads the mew package into the target Intune tenant.
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
+
 #>
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory = $False)]
-    [System.String] $Path = "D:\MEMApp\Dialpad",
+    [System.String] $Path = "D:\MEMApp\",
 
     [Parameter(Mandatory = $False)]
-    [System.String] $PackageOutputPath = "D:\MEMAppOut\Dialpad",
+    [System.String] $PackageOutputPath = "D:\MEMAppOut\",
 
     [Parameter(Mandatory = $False)]
     [System.String] $ScriptName = "Install-Package.ps1",
@@ -49,6 +49,10 @@ Param (
 )
     
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
+
+#Create subfolders for this package
+$PackageOutputPath = Join-Path $PackageOutputPath $PackageId
+$Path = Join-Path $Path $PackageId
 
 #region Check if token has expired and if, request a new
 Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token for tenant: $TenantName."

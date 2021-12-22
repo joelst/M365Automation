@@ -10,10 +10,10 @@
 [CmdletBinding()]
 Param (
     [Parameter(Mandatory = $False)]
-    [System.String] $Path = "D:\MEMApp\AdobeReader",
+    [System.String] $Path = "D:\MEMApp\",
 
     [Parameter(Mandatory = $False)]
-    [System.String] $PackageOutputPath = "D:\MEMAppOut\AdobeReader",
+    [System.String] $PackageOutputPath = "D:\MEMAppOut\",
 
     [Parameter(Mandatory = $False)]
     [System.String] $ScriptName = "Install-Package.ps1",
@@ -48,6 +48,11 @@ Param (
 )
     
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
+
+
+#Create subfolders for this package
+$PackageOutputPath = Join-Path $PackageOutputPath $PackageId
+$Path = Join-Path $Path $PackageId
 
 #region Check if token has expired and if, request a new
 Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token for tenant: $TenantName."
