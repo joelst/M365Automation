@@ -91,48 +91,51 @@ else {
     $InformationPreference = "Continue"
 
 
-$packageInfo = winget show $PackageId | ConvertFrom-String -Delimiter ": " -PropertyNames "Detail","Value"
+    $packageInfo = winget show $PackageId 
     foreach ($info in $packageInfo)
     {
-        if ($info.Detail.Trim() -eq "Version")
-        {
-            $PackageVersion = $info.Value.Trim()
-            Write-Output "  PackageVersion = $PackageVersion"
+        try{ 
+            $key = ($info -split ": ")[0].Trim()
+            $value = ($info -split ": ")[1].Trim()
         }
-        if ($info.Detail.Trim() -eq "Publisher")
-        {
-            $Publisher = $info.Value.Trim()
-            Write-Output "  Publisher = $Publisher"
+        catch{
+            # just ignore the error
         }
-        if ($info.Detail.Trim() -eq "Publisher Url")
+        
+        if ($key -eq "Version")
         {
-            $PublisherUrl = $info.Value.Trim()
-            Write-Output "  PublisherURL = $PublisherUrl"
+            $PackageVersion = $value
+            Write-Verbose "  PackageVersion = $PackageVersion"
         }
-        if ($info.Detail.Trim() -eq "Description")
+        if ($key -eq "Publisher")
         {
-           $Description = $info.Value.Trim()
-            Write-Output "  Description = $Description"
+            $Publisher = $value
+            Write-Verbose "  Publisher = $Publisher"
         }
-        if ($info.Detail.Trim() -eq "Privacy Url")
+        if ($key -eq "Publisher Url")
         {
-            $PrivacyURL = $info.Value.Trim()
-            Write-Output "  PrivacyUrl = $PrivacyUrl"
+            $PublisherUrl = $value
+            Write-Verbose "  PublisherURL = $PublisherUrl"
         }
-        if ($info.Detail.Trim() -eq "Download Url")
+        if ($key -eq "Description")
         {
-            $DownloadUrl = $info.Value.Trim()
-            Write-Output "  DownloadUrl = $DownloadUrl"
+            $Description = $value
+            Write-Verbose "  Description = $Description"
         }
-        if ($info.Detail.Trim() -eq "Homepage")
+        if ($key -eq "Privacy Url")
         {
-            $InformationURL = $info.Value.Trim()
-            Write-Output "  InfomationUrl = $InformationUrl"
+            $PrivacyURL = $value
+            Write-Verbose "  PrivacyUrl = $PrivacyUrl"
         }
-        if ($info.Detail.Trim() -eq "Homepage")
+        if ($key -eq "Download Url")
         {
-            $InformationURL = $info.Value.Trim()
-            Write-Output "  InfomationUrl = $InformationUrl"
+            $DownloadUrl = $value
+            Write-Verbose "  DownloadUrl = $DownloadUrl"
+        }
+        if ($key -eq "Homepage")
+        {
+            $InformationURL = $value
+            Write-Verbose "  InfomationUrl = $InformationUrl"
         }
     }
     
