@@ -1,12 +1,25 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest 7-Zip for MEM (Intune) deployment.
-        Uploads the mew package into the target Intune tenant.
+        Execute all Update-*.ps1 in the specified path to create an update factory. 
+
+        IMPORTANT Some of the update scripts have "extra" parameters that are not included in this script, you can modify this script or the individual scripts to ensure
+        the correct parameter values are included.
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
+    
+    .PARAMETER ScriptPath
+    Path where all of the Update scripts exist
+
+    .PARAMETER Path
+    Path to use for downloading and processing packages
+
+    .PARAMETER PackageOutputPath
+    Path to export the created packages
+
+    .PARAMETER TenantName
+    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
 #>
 [CmdletBinding()]
 Param (
@@ -17,16 +30,37 @@ Param (
     [System.String] $PackageOutputPath = "D:\MEMAppOut\",
 
     [Parameter(Mandatory = $False)]
-    [System.String] $ScriptPath = "D:\MemAppFactory",
+    [System.String] $ScriptPath = (Get-Location).Path,
 
     [Parameter(Mandatory = $False)]
-    [System.String] $TenantName = "placeholder.onmicrosoft.com",
-   
+    [System.String] $TenantName = "placeholder.onmicrosoft.com"
+
 )
 
-## WORK IN PROGRESS
 
-## FIND ALL Update-*.ps1 files in $ScriptPath
+## FIND ALL Update-*.ps1 files in $ScriptPath, using -filter and -include was not working so using this sloppy Get-ChildItem
+$Scripts = (Get-ChildItem -path $ScriptPath -Exclude "Update-AllPackages.ps1", "*.json", "New-*.ps1").FullName
 
-## For each - Execute each found scripts with provided switches.
+Write-Output "`n Found $($scripts.Count) scripts to run"
+Write-Verbose "The following scripts will be executed"
 
+foreach ($script in $scripts)
+{
+    Write-Verbose "  $script"
+}
+
+foreach ($script in $scripts)
+{
+    if ($script -notcontains "Update-AllPackages.ps1")
+    {
+        Write-Output "`n Running: $script `n"
+
+        # using this method because need to specify a switch so -ArgumentList is not straightforward
+        $sb = {
+            & $script -Path $path -PackageOutputPath $PackageOutputPath -TenantName $TenantName -Upload
+        }
+        
+        Invoke-Command -ScriptBlock $sb
+    }
+    
+}

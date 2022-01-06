@@ -6,7 +6,7 @@
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
+
 #>
 [CmdletBinding()]
 Param (
@@ -15,9 +15,6 @@ Param (
 
     [Parameter(Mandatory = $False)]
     [System.String] $PackageOutputPath = "D:\MEMAppOut\",
-
-    [Parameter(Mandatory = $False)]
-    [System.String] $ScriptName = "Install-Package.ps1",
 
     [Parameter(Mandatory = $False)]
     [System.String] $TenantName = "placeholder.onmicrosoft.com",
@@ -70,7 +67,7 @@ If ($Null -ne $Global:AccessToken) {
         [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
         $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
         Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
-        #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
+
     }
     else {
         Write-Verbose "Existing authentication token is okay."
@@ -79,7 +76,6 @@ If ($Null -ne $Global:AccessToken) {
 else {
     Write-Host -ForegroundColor "Cyan" "Authentication token does not exist, requesting a new token."
     $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
-    #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName -PromptBehavior "Auto"
     
 }
 #endregion
@@ -178,11 +174,11 @@ if ($PrivacyURL -eq "")
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!"
+        Write-Host "        Package already exists, exiting process!`n"
         exit
     }
     else {
-        Write-Host "        Package does not exist, creating package now!"
+        Write-Host "        Package does not exist, creating package now!`n"
     }
 
     # Download installer with winget

@@ -11,7 +11,13 @@
         The installation command is customized using the -SupplementalInstallCmd parameter to add a default view server. You should manually adjust this yourself as this is not a parameter.
     
     .PARAMETER Path
-    Path for temporary files
+    Path to use for downloading and processing packages
+
+    .PARAMETER PackageOutputPath
+    Path to export the created packages
+
+    .PARAMETER TenantName
+    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
     
 #>
 [CmdletBinding()]
@@ -158,13 +164,12 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!"
+        Write-Host "        Package already exists, exiting process!`n"
         exit
     }
     else {
-        Write-Host "        Package does not exist, creating package now!"
+        Write-Host "        Package does not exist, creating package now!`n"
     }
-
     # Download installer with winget
     If ($PackageName) {
  

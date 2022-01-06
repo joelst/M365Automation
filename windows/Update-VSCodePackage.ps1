@@ -6,7 +6,16 @@
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-        For details on Evergreen go here: https://stealthpuppy.com/Evergreen
+
+    .PARAMETER Path
+    Path to use for downloading and processing packages
+
+    .PARAMETER PackageOutputPath
+    Path to export the created packages
+
+    .PARAMETER TenantName
+    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
+
 #>
 [CmdletBinding()]
 Param (
@@ -178,11 +187,11 @@ if ($PrivacyURL -eq "")
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!"
+        Write-Host "        Package already exists, exiting process!`n"
         exit
     }
     else {
-        Write-Host "        Package does not exist, creating package now!"
+        Write-Host "        Package does not exist, creating package now!`n"
     }
 
     # Download installer with winget

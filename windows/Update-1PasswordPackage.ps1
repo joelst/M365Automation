@@ -6,6 +6,20 @@
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
+    
+    .PARAMETER Path
+    Path to use for downloading and processing packages
+
+    .PARAMETER PackageOutputPath
+    Path to export the created packages
+
+    .PARAMETER TenantName
+    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
+
+    .EXAMPLE
+    .\Update-1PasswordPackage.ps1 -Upload
+    
+    This will create a new package using the default values
 
 #>
 [CmdletBinding()]
@@ -15,9 +29,6 @@ Param (
 
     [Parameter(Mandatory = $False)]
     [System.String] $PackageOutputPath = "D:\MEMAppOut\",
-
-    [Parameter(Mandatory = $False)]
-    [System.String] $ScriptName = "Install-Package.ps1",
 
     [Parameter(Mandatory = $False)]
     [System.String] $TenantName = "placeholder.onmicrosoft.com",
@@ -149,11 +160,11 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!"
+        Write-Host "        Package already exists, exiting process!`n"
         exit
     }
     else {
-        Write-Host "        Package does not exist, creating package now!"
+        Write-Host "        Package does not exist, creating package now!`n"
     }
 
     # Download installer with winget
