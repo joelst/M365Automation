@@ -1,6 +1,7 @@
 {
  
- "packages":  [ {
+ "packages":  [ 
+     {
         "PackageId":"Adobe.AcrobatReaderDC",
         "PackageName":"Adobe Acrobat Reader DC",
         "IconSource": "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png",

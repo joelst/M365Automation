@@ -29,7 +29,7 @@ Param (
     $PackageId = "7zip.7zip",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{23170F69-40C1-2702-2106-000001000000}",
+    $ProductCode = "{23170F69-40C1-2702-2107-000001000000}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
@@ -41,7 +41,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "7z.exe",
 
-    $IconSource = "https://image.apphit.com/image/7-zip/7zip-logo.png"
+    $IconSource = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/7ziplogo.svg/500px-7ziplogo.svg.png",
+
+    [switch]$Force
     
 )
     
@@ -56,16 +58,15 @@ Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token f
 If ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
     [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
-    $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
+    [int]$TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
     Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
 
     If ($TokenExpireMins -le 2) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
         
         $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
-        $UtcDateTime = (Get-Date).ToUniversalTime()
         [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
-        $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
+        [int]$TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
         Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
 
     }
@@ -164,8 +165,8 @@ if ($PrivacyURL -eq "")
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent"
-    $UninstallCommandLine = ".\$Executable --uninstall --silent"
+    $InstallCommandLine = "msiexec.exe /i $Executable /quiet /norestart /QN"
+    $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
     #To_Automate region
 
 #endregion
@@ -174,8 +175,13 @@ if ($PrivacyURL -eq "")
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"

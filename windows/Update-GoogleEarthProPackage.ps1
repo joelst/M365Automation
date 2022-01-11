@@ -1,12 +1,15 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Jabra Direct for MEM (Intune) deployment.
+        Packages the latest Google Earth Pro for MEM (aka Intune) deployment.
         Uploads the mew package into the target Intune tenant.
+     
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-
+        
+        The installation command is customized using the -SupplementalInstallCmd parameter to add a default view server. You should manually adjust this yourself as this is not a parameter.
+    
     .PARAMETER Path
     Path to use for downloading and processing packages
 
@@ -15,6 +18,7 @@
 
     .PARAMETER TenantName
     Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
+    
 #>
 [CmdletBinding()]
 Param (
@@ -29,33 +33,34 @@ Param (
 
     [Parameter(Mandatory = $False)]
     [System.Management.Automation.SwitchParameter] $Upload,
-
-    [Parameter(Mandatory = $False)]
-    $PackageName = "Jabra Direct",
-    
-    [Parameter(Mandatory = $False)]
-    $PackageId = "Jabra.Direct",
-    
-    [Parameter(Mandatory = $False)]
-    $ProductCode = "{E1BFA489-E9A6-41D8-B41B-428034C98405}",
-    
+   
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallBehavior = "System",
+    $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles(x86)}\Jabra\Direct4\",
+    $PackageName = "Google Earth Pro",
     
     [Parameter(Mandatory = $False)]
-    $AppExecutable = "jabra-direct.exe",
+    $PackageId = "Google.EarthPro",
+     
+    [Parameter(Mandatory = $False)]
+    $ProductCode = "{9BFB06CD-3925-49E2-BAB7-EA695821CE4C}",
+    
+    [Parameter(Mandatory = $False)]
+    $AppPath = "${env:ProgramFiles}\Google\Google Earth Pro\client\",
+    
+    [Parameter(Mandatory = $False)]
+    $AppExecutable = "googleearth.exe",
 
-    $IconSource = "https://www.jabra.com.de/~/media/Logos/Jabra_logo_239x239.png",
+    $IconSource = "https://lh3.googleusercontent.com/RjxBl67S_11VT11lBRsPTJn6MTUfAFgRwy6WL0vrpM1iUlVRYUS_domm__TagUpq8XdR=w300",
+    
+    $SupplementalInstallCmd = "",
 
     [switch]$Force
 
-    
 )
-    
+
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
 
 #Create subfolders for this package
@@ -92,8 +97,9 @@ else {
     Write-Host -ForegroundColor "Cyan" "Getting $PackageName updates via Winget."
     $ProgressPreference = "SilentlyContinue"
     $InformationPreference = "Continue"
+    
 
-$packageInfo = winget show $PackageId 
+    $packageInfo = winget show $PackageId
     foreach ($info in $packageInfo)
     {
         try{ 
@@ -147,11 +153,11 @@ $packageInfo = winget show $PackageId
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart"
-    $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
+    $InstallCommandLine = ".\$Executable OMAHA=1 $SupplementalInstallCmd"
+    $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
     #To_Automate region
 
-#endregion
+    #endregion
     Write-Host "    Checking to see if $PackageName $PackageVersion has already been created in MEM..."
     $existingPackages = Get-IntuneWin32App -DisplayName $PackageName | Where-Object {$_.DisplayVersion -eq $PackageVersion} | Select-Object -First 1
 
@@ -328,7 +334,7 @@ $packageInfo = winget show $PackageId
                     InformationURL           = $InformationURL
                     PrivacyURL               = $PrivacyURL
                     CompanyPortalFeaturedApp = $false
-                    InstallExperience        = "system"
+                    InstallExperience        = $InstallExperience
                     RestartBehavior          = "suppress"
                     DetectionRule            = $DetectionRule
                     RequirementRule          = $RequirementRule
@@ -337,6 +343,7 @@ $packageInfo = winget show $PackageId
                     AppVersion               = $PackageVersion
                     Icon                     = $Icon
                     Verbose                  = $true
+
                 }
                 $null = Add-IntuneWin32App @params
             }

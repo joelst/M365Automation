@@ -55,7 +55,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "1Password.exe",
 
-    $IconSource = "https://www.igyaan.in/wp-content/uploads/2014/05/1password-logo-round.png"
+    $IconSource = "https://www.igyaan.in/wp-content/uploads/2014/05/1password-logo-round.png",
+
+    [switch]$Force
     
 )
     
@@ -160,8 +162,13 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"

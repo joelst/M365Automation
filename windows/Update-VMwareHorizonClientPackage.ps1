@@ -58,8 +58,9 @@ Param (
 
     $IconSource = "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png",
     
-    $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>"
+    $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>",
 
+    [switch]$Force
 )
 
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
@@ -164,12 +165,18 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"
     }
+
     # Download installer with winget
     If ($PackageName) {
  

@@ -1,7 +1,7 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Jabra Direct for MEM (Intune) deployment.
+        Packages the latest Zoom client for MEM (Intune) deployment.
         Uploads the mew package into the target Intune tenant.
 
     .NOTES
@@ -31,29 +31,29 @@ Param (
     [System.Management.Automation.SwitchParameter] $Upload,
 
     [Parameter(Mandatory = $False)]
-    $PackageName = "Jabra Direct",
+    $PackageName = "Zoom",
     
     [Parameter(Mandatory = $False)]
-    $PackageId = "Jabra.Direct",
+    $PackageId = "Zoom.Zoom",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{E1BFA489-E9A6-41D8-B41B-428034C98405}",
+    $ProductCode = "{89A05370-496B-4589-8D16-539314A11C8C}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
     $InstallBehavior = "System",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles(x86)}\Jabra\Direct4\",
+    $AppPath = "${env:ProgramFiles}\Zoom\bin\",
     
     [Parameter(Mandatory = $False)]
-    $AppExecutable = "jabra-direct.exe",
+    $AppExecutable ="zoom.exe",
 
-    $IconSource = "https://www.jabra.com.de/~/media/Logos/Jabra_logo_239x239.png",
+    $IconSource = "https://blog.zoom.us/wp-content/uploads/2020/06/Zoom-Icon.png",
+
+    $SupplementalInstallCmd = "zNoDesktopShortCut=1 ZoomAutoUpdate=True zRecommend='AudioAutoAdjust=1'",
 
     [switch]$Force
-
-    
 )
     
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
@@ -141,14 +141,15 @@ $packageInfo = winget show $PackageId
         }
     }
     
+
     # Variables for the package
     $DisplayName = $PackageName ##+ " " + $PackageVersion
 
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart"
-    $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
+    $InstallCommandLine = "msiexec.exe /i $Executable /quiet /norestart /QN $SupplementalInstallCmd"
+    $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
     #To_Automate region
 
 #endregion

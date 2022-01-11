@@ -49,7 +49,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "dialpad.exe",
 
-    $IconSource = "https://www.betterbuys.com/wp-content/uploads/2020/01/dialpad-logo.png"
+    $IconSource = "https://www.betterbuys.com/wp-content/uploads/2020/01/dialpad-logo.png",
+
+    [switch]$Force
     
 )
     
@@ -153,8 +155,13 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"

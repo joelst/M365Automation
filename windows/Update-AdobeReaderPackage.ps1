@@ -49,7 +49,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "Acrobat.exe",
 
-    $IconSource = "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png"
+    $IconSource = "https://raw.githubusercontent.com/Insentra/intune-icons/main/icons/Adobe-AcrobatReader.png",
+
+    [switch]$Force
     
 )
     
@@ -166,8 +168,13 @@ else {
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"

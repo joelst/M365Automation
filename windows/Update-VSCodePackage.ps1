@@ -53,8 +53,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "code.exe",
 
-    $IconSource = "https://www.pngkit.com/png/detail/128-1285214_vscode-visual-studio-code.png"
-    
+    $IconSource = "https://www.pngkit.com/png/detail/128-1285214_vscode-visual-studio-code.png",
+
+    [switch]$Force
 )
     
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
@@ -187,8 +188,13 @@ if ($PrivacyURL -eq "")
 
     if (-not $existingPackages -eq '')
     {
-        Write-Host "        Package already exists, exiting process!`n"
-        exit
+        if ($Force.IsPresent -eq $false) {
+            Write-Host "        Package already exists, exiting process!`n"
+            exit
+        }
+        else{
+            Write-Host "        Package already exists, Force parameter detected!`n"
+        }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"
