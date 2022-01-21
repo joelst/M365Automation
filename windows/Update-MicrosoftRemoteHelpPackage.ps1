@@ -41,7 +41,7 @@ Param (
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallBehavior = "System",
+    $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
     $AppPath = "${env:ProgramFiles}\Remote help\",
@@ -49,7 +49,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "RemoteHelp.exe",
 
-    $IconSource = "https://www.jabra.com.de/~/media/Logos/Jabra_logo_239x239.png",
+    $IconSource = "https://docs.microsoft.com/en-us/intune/media/cp_manbro_after_042017.png",
 
     [switch]$Force
 
@@ -328,7 +328,7 @@ $packageInfo = winget show $PackageId
                     InformationURL           = $InformationURL
                     PrivacyURL               = $PrivacyURL
                     CompanyPortalFeaturedApp = $false
-                    InstallExperience        = "system"
+                    InstallExperience        = $InstallExperience
                     RestartBehavior          = "suppress"
                     DetectionRule            = $DetectionRule
                     RequirementRule          = $RequirementRule
@@ -338,6 +338,7 @@ $packageInfo = winget show $PackageId
                     Icon                     = $Icon
                     Verbose                  = $true
                 }
+                $params | Write-Output
                 $null = Add-IntuneWin32App @params
             }
             catch [System.Exception] {

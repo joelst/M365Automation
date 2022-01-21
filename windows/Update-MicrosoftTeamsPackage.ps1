@@ -1,7 +1,7 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Zoom client for MEM (Intune) deployment.
+        Packages the latest Microsoft Remote Help for MEM (Intune) deployment.
         Uploads the mew package into the target Intune tenant.
 
     .NOTES
@@ -31,29 +31,32 @@ Param (
     [System.Management.Automation.SwitchParameter] $Upload,
 
     [Parameter(Mandatory = $False)]
-    $PackageName = "Zoom",
+    $PackageName = "Microsoft Teams",
     
     [Parameter(Mandatory = $False)]
-    $PackageId = "Zoom.Zoom",
+    $PackageId = "Microsoft.Teams",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{89A05370-496B-4589-8D16-539314A11C8C}",
+    $ProductCode = "",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallExperience = "System",
+    $InstallExperience = "User",
+
+    [Parameter(Mandatory = $False)]
+    [ValidateSet("Default","MSI","FileVersion","FileExists")]
+    [string]$DetectionType = "FileExists",  
+
+    [Parameter(Mandatory = $False)]
+    $AppPath = "%LocalAppData%\Microsoft\Teams\",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles}\Zoom\bin\",
-    
-    [Parameter(Mandatory = $False)]
-    $AppExecutable ="zoom.exe",
+    $AppExecutable = "Update.exe",
 
-    $IconSource = "https://blog.zoom.us/wp-content/uploads/2020/06/Zoom-Icon.png",
-
-    $SupplementalInstallCmd = "zNoDesktopShortCut=1 ZoomAutoUpdate=True zRecommend='AudioAutoAdjust=1'",
+    $IconSource = "https://cpgeneralstore.blob.core.windows.net/officialicons/teams/icon_1.0.1215.1603.png",
 
     [switch]$Force
+
 )
     
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
@@ -141,15 +144,14 @@ $packageInfo = winget show $PackageId
         }
     }
     
-
     # Variables for the package
     $DisplayName = $PackageName ##+ " " + $PackageVersion
 
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = "msiexec.exe /i $Executable /quiet /norestart /QN $SupplementalInstallCmd"
-    $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
+    $InstallCommandLine = ".\$Executable --silent"
+    $UninstallCommandLine = "%LocalAppData%\Microsoft\Teams\Update.exe --uninstall -s"
     #To_Automate region
 
 #endregion
@@ -271,7 +273,7 @@ $packageInfo = winget show $PackageId
         }
 
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $PackageVersion) {
+        If ($ProductCode -and $PackageVersion -or ($DetectionRuleType -eq "Default")) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = "greaterThanOrEqual"
@@ -279,13 +281,8 @@ $packageInfo = winget show $PackageId
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
         }
-        Else {
-            Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
-            Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
-            Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
-            Break
-        }
-        If ($AppPath -and $AppExecutable) {
+
+        If ($AppPath -and $AppExecutable -and ($DetectionType -eq "FileVersion")) {
             $params = @{
                 Version              = $True
                 Path                 = $AppPath
@@ -296,16 +293,29 @@ $packageInfo = winget show $PackageId
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
         }
-        Else {
-            Write-Error -Message "Cannot create the detection rule - check application path and executable."
-            Write-Host -ForegroundColor "Cyan" "Path: $AppPath."
-            Write-Host -ForegroundColor "Cyan" "Exe: $AppExecutable."
-            Break
+        ElseIf ($DetectionType -eq "FileExists"){
+            $params = @{
+                Existence            = $True
+                Path                 = $AppPath
+                FileOrFolder         = $AppExecutable
+                Check32BitOn64System = $False 
+                DetectionType        = "exists"
+                
+            }
+            $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
         }
-        If ($DetectionRule1 -and $DetectionRule2) {
-            $DetectionRule = @($DetectionRule1, $DetectionRule2)
+        
+        $DetectionRule = @()
+
+        If ($DetectionRule1){
+            $DetectionRule += $DetectionRule1
         }
-        Else {
+        
+        If ($DetectionRule2) {
+            $DetectionRule += $DetectionRule2
+        }
+        
+        if ($DetectionRule.Count -le 0) {
             Write-Error -Message "Failed to create the detection rule."
             Break
         }
@@ -313,35 +323,38 @@ $packageInfo = winget show $PackageId
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = "1909"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
         # Add new EXE Win32 app
         # Requires a connection via Connect-MSIntuneGraph first
         If ($PSBoundParameters.Keys.Contains("Upload")) {
+            $params = @{
+                FilePath                 = $IntuneWinFile.FullName
+                DisplayName              = $DisplayName
+                Description              = $Description
+                Publisher                = $Publisher
+                InformationURL           = $InformationURL
+                PrivacyURL               = $PrivacyURL
+                CompanyPortalFeaturedApp = $false
+                InstallExperience        = $InstallExperience
+                RestartBehavior          = "suppress"
+                DetectionRule            = $DetectionRule
+                RequirementRule          = $RequirementRule
+                InstallCommandLine       = $InstallCommandLine
+                UninstallCommandLine     = $UninstallCommandLine
+                AppVersion               = $PackageVersion
+                Icon                     = $Icon
+                Verbose                  = $true
+            }
+            $params | Write-Output
             try {
-                $params = @{
-                    FilePath                 = $IntuneWinFile.FullName
-                    DisplayName              = $DisplayName
-                    Description              = $Description
-                    Publisher                = $Publisher
-                    InformationURL           = $InformationURL
-                    PrivacyURL               = $PrivacyURL
-                    CompanyPortalFeaturedApp = $false
-                    InstallExperience        = $InstallExperience
-                    RestartBehavior          = "suppress"
-                    DetectionRule            = $DetectionRule
-                    RequirementRule          = $RequirementRule
-                    InstallCommandLine       = $InstallCommandLine
-                    UninstallCommandLine     = $UninstallCommandLine
-                    AppVersion               = $PackageVersion
-                    Icon                     = $Icon
-                    Verbose                  = $true
-                }
+
                 $null = Add-IntuneWin32App @params
             }
             catch [System.Exception] {
+                
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
                 Break
             }

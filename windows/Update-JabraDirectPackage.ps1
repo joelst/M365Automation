@@ -41,7 +41,7 @@ Param (
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallBehavior = "System",
+    $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
     $AppPath = "${env:ProgramFiles(x86)}\Jabra\Direct4\",
@@ -328,7 +328,7 @@ $packageInfo = winget show $PackageId
                     InformationURL           = $InformationURL
                     PrivacyURL               = $PrivacyURL
                     CompanyPortalFeaturedApp = $false
-                    InstallExperience        = "system"
+                    InstallExperience        = $InstallExperience
                     RestartBehavior          = "suppress"
                     DetectionRule            = $DetectionRule
                     RequirementRule          = $RequirementRule
