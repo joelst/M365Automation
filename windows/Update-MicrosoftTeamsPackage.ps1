@@ -1,7 +1,7 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Microsoft Remote Help for MEM (Intune) deployment.
+        Packages the latest Microsoft Teams for MEM (Intune) deployment.
         Uploads the mew package into the target Intune tenant.
 
     .NOTES

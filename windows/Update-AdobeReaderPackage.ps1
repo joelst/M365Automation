@@ -1,8 +1,8 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Adobe Acrobat Reader DC (US English) for Intune deployment.
-        Uploads the mew package into the target Intune tenant.
+        Packages the latest Adobe Acrobat Reader DC (US English) for Microsoft Endpoint Manager (Intune) deployment.
+        Uploads the new packages into the specified tenant.
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
@@ -14,7 +14,7 @@
     Path to export the created packages
 
     .PARAMETER TenantName
-    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant
+    Microsoft Endpoint Manager (Intune) Azure Active Directory tenant
 #>
 [CmdletBinding()]
 Param (
