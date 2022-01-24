@@ -1,10 +1,11 @@
 # Microsoft Endpoint Manager (Intune) App Factory tools
 
 This repo was heavily inspired heavily by https://github.com/aaronparker and the scripts here: https://github.com/aaronparker/intune/tree/main/Apps
+Another similar solution is: https://github.com/FlorianSLZ/scloud/tree/main/intune-win32-deployment
 
 ## Scripts
 
-TheI'm building a list of applications to package and then adjusting the core script to eventually build a pipeline that will publish all applications in the factory. For now there is a script for each application with a `Update-AllPackages.ps1` script to run all of the scripts. 
+This repo is a growing list of application package scripts. The goal is to build one script file with a defintion file that includes all packages to build and publish all applications. For each defined package has a its own script. The `Update-AllPackages.ps1` script will run all of the scripts. 
 
 I have only started on the Windows packages and have a need for a similar solution for macOS packages.
 
