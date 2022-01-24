@@ -24,6 +24,7 @@ The primary reason seems to be that the file version does not match the package 
 - Automatically publishing superceded updates. If older version found, read assignment, apply assignment to new package and set it to supercede old package.
 - Consolidate to a single script (or PowerShell module) and use JSON or CSV to define all packages.
 - Extract and or test GUID or File version validation locally before creating the package.
+- Create a standardized icon repository system instead of using random links.
 
 ## Contributing
 
