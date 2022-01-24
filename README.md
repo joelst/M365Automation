@@ -4,7 +4,7 @@ This repo was heavily inspired heavily by https://github.com/aaronparker and the
 
 ## Scripts
 
-TheI'm building a list of applications to package and then adjusting the core script to eventually build a pipeline that will publish all applications in the factory. For now there is a script for each application with a `Update-AllPackages.ps1` script to run all of the scripts. 
+I'm building a list of applications to package and then adjusting the core script to eventually build a pipeline that will publish all applications in the factory. For now there is a script for each application with a `Update-AllPackages.ps1` script to run all of the scripts. 
 
 I have only started on the Windows packages and have a need for a similar solution for macOS packages.
 
