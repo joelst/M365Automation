@@ -11,7 +11,7 @@ I have only started on the Windows packages and have a need for a similar soluti
 
 ## Update catalog
 
-The Windows scripts rely heavily on Winget instead of Evergreen. I chose to use winget instead of Evergreen is because I'm been contributing to winget package manifests and can provide updates quickly to manifests if needed.
+The Windows scripts rely heavily on Winget. I chose to use winget because I'm been contributing to winget package manifests and can provide updates quickly.
 
 # Contributing
 
