@@ -7,6 +7,14 @@
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
 
+    .PARAMETER Path
+    Path to use for downloading and processing packages
+
+    .PARAMETER PackageOutputPath
+    Path to export the created packages
+    
+    .PARAMETER TenantName
+    Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant. This should be in the format of Organization.onmicrosoft.com
 #>
 [CmdletBinding()]
 Param (
@@ -16,8 +24,8 @@ Param (
     [Parameter(Mandatory = $False)]
     [System.String] $PackageOutputPath = "D:\MEMAppOut\",
 
-    [Parameter(Mandatory = $False)]
-    [System.String] $TenantName = "placeholder.onmicrosoft.com",
+    [Parameter(Mandatory = $True)]
+    [System.String] $TenantName,
 
     [Parameter(Mandatory = $False)]
     [System.Management.Automation.SwitchParameter] $Upload,
