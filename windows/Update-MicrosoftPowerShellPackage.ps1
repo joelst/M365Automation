@@ -1,8 +1,8 @@
 #Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
 <#
     .SYNOPSIS
-        Packages the latest Adobe Acrobat Reader DC (US English) for Microsoft Endpoint Manager (Intune) deployment.
-        Uploads the new packages into the specified tenant.
+        Packages the latest Jabra Direct for MEM (Intune) deployment.
+        Uploads the mew package into the target Intune tenant.
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
@@ -12,9 +12,10 @@
 
     .PARAMETER PackageOutputPath
     Path to export the created packages
-
+    
     .PARAMETER TenantName
     Microsoft Endpoint Manager (Intune) Azure Active Directory Tenant. This should be in the format of Organization.onmicrosoft.com
+
 #>
 [CmdletBinding()]
 Param (
@@ -31,27 +32,28 @@ Param (
     [System.Management.Automation.SwitchParameter] $Upload,
 
     [Parameter(Mandatory = $False)]
-    $PackageName = "Adobe Acrobat Reader",
+    $PackageName = "Microsoft PowerShell",
     
     [Parameter(Mandatory = $False)]
-    $PackageId = "Adobe.Acrobat.Reader.64-bit",
+    $PackageId = "Microsoft.PowerShell",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{AC76BA86-1033-1033-7760-BC15014EA700}",
+    $ProductCode = "{11E117C7-01D0-4C4E-9096-2E90843A173E}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallExperience = "User",
+    $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "$env:ProgramFiles\Adobe\Acrobat DC\Acrobat",
+    $AppPath = "${env:ProgramFiles}\PowerShell\7\",
     
     [Parameter(Mandatory = $False)]
-    $AppExecutable = "Acrobat.exe",
+    $AppExecutable = "pwsh.exe",
 
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
+
     
 )
     
@@ -67,7 +69,7 @@ If ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
     [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
     $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
-    Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
+    Write-Warning -Message "Current authentication token expires in (minutes): $($TokenExpireMins)"
 
     If ($TokenExpireMins -le 1) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
@@ -83,17 +85,7 @@ else {
     Write-Host -ForegroundColor "Cyan" "Authentication token does not exist, requesting a new token."
     $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
     #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName -PromptBehavior "Auto"
-    $UtcDateTime = (Get-Date).ToUniversalTime()
-    [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
-    $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
-    Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
-
-    If ($TokenExpireMins -le 1) {
-        Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
-        
-        $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
-        #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
-    }
+    
 }
 #endregion
 
@@ -102,8 +94,7 @@ else {
     $ProgressPreference = "SilentlyContinue"
     $InformationPreference = "Continue"
 
-
-    $packageInfo = winget show $PackageId 
+$packageInfo = winget show $PackageId 
     foreach ($info in $packageInfo)
     {
         try{ 
@@ -157,8 +148,8 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable AcroRdrDCx642100720099_en_US.exe -sfx_nu /sALL /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1"
-    $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
+    $InstallCommandLine = ".\$Executable /silent /norestart"
+    $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 
 #endregion

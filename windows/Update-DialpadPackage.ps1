@@ -49,7 +49,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "dialpad.exe",
 
-    $IconSource = "https://www.betterbuys.com/wp-content/uploads/2020/01/dialpad-logo.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
     

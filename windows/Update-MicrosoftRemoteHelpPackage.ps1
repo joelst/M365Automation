@@ -50,7 +50,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "RemoteHelp.exe",
 
-    $IconSource = "https://docs.microsoft.com/en-us/intune/media/cp_manbro_after_042017.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
 

@@ -50,7 +50,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable ="zoom.exe",
 
-    $IconSource = "https://blog.zoom.us/wp-content/uploads/2020/06/Zoom-Icon.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     $SupplementalInstallCmd = "zNoDesktopShortCut=1 ZoomAutoUpdate=True zRecommend='AudioAutoAdjust=1'",
 

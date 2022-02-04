@@ -4,7 +4,6 @@
         Packages the latest VMware Horizon Client for MEM (aka Intune) deployment.
         Uploads the mew package into the target Intune tenant.
      
-
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
         
@@ -48,7 +47,7 @@ Param (
     $PackageId = "Vmware.HorizonClient",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{9F959D5E-DF9C-4AC4-88C3-261EB45A4C38}",
+    $ProductCode = "{881E8C1C-858D-47BD-99E1-A40A54A555A6}",
     
     [Parameter(Mandatory = $False)]
     $AppPath = "${env:ProgramFiles(x86)}\VMware\VMware Horizon View Client\",
@@ -56,7 +55,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "vmware-view.exe",
 
-    $IconSource = "https://images-na.ssl-images-amazon.com/images/I/51LHYlml%2BgL.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
     
     $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>",
 
@@ -155,7 +154,8 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart $SupplementalInstallCmd"
+    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && AppInstallerCLI.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements --override '--silent $SupplementalInstallCmd'"
+    $UpgradeCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && AppInstallerCLI.exe upgrade --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 

@@ -53,7 +53,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "code.exe",
 
-    $IconSource = "https://www.pngkit.com/png/detail/128-1285214_vscode-visual-studio-code.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
 )

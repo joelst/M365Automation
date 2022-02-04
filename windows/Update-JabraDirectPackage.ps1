@@ -50,7 +50,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "jabra-direct.exe",
 
-    $IconSource = "https://www.jabra.com.de/~/media/Logos/Jabra_logo_239x239.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
 

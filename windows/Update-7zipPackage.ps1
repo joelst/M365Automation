@@ -49,7 +49,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "7z.exe",
 
-    $IconSource = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/7ziplogo.svg/500px-7ziplogo.svg.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
     

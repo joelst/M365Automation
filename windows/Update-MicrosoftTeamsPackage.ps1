@@ -54,7 +54,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "Update.exe",
 
-    $IconSource = "https://cpgeneralstore.blob.core.windows.net/officialicons/teams/icon_1.0.1215.1603.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
 
     [switch]$Force
 

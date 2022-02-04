@@ -53,7 +53,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "googleearth.exe",
 
-    $IconSource = "https://lh3.googleusercontent.com/RjxBl67S_11VT11lBRsPTJn6MTUfAFgRwy6WL0vrpM1iUlVRYUS_domm__TagUpq8XdR=w300",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
     
     $SupplementalInstallCmd = "",
 
