@@ -54,7 +54,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "Update.exe",
 
-    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [switch]$Force
 

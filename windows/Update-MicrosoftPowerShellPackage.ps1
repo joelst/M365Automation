@@ -50,7 +50,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "pwsh.exe",
 
-    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [switch]$Force
 
@@ -255,6 +255,7 @@ $packageInfo = winget show $PackageId
         #region Upload intunewin file and create the Intune app
         # Convert image file to icon
         $ImageFile = (Join-Path -Path $Path -ChildPath (Split-Path -Path $IconSource -Leaf))
+        Write-Verbose " Downloading image from $IconSource and saving to $ImageFile"
         try {
             Invoke-WebRequest -Uri $IconSource -OutFile $ImageFile -UseBasicParsing
         }
@@ -262,7 +263,8 @@ $packageInfo = winget show $PackageId
             Write-Error -Message "Failed to download: $IconSource with: $($_.Exception.Message)"
             Break
         }
-        If (Test-Path -Path $ImageFile) {
+        
+        if (Test-Path -Path $ImageFile) {
             $Icon = New-IntuneWin32AppIcon -FilePath $ImageFile
         }
         Else {
@@ -271,21 +273,22 @@ $packageInfo = winget show $PackageId
         }
 
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $PackageVersion) {
+        if ($ProductCode -and $PackageVersion) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = "greaterThanOrEqual"
                 #ProductVersion         = $PackageVersion
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
+            Write-Verbose " Creating detection rule using product code"
         }
-        Else {
+        else {
             Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
             Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
             Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
             Break
         }
-        If ($AppPath -and $AppExecutable) {
+        if ($AppPath -and $AppExecutable) {
             $params = @{
                 Version              = $True
                 Path                 = $AppPath
@@ -295,17 +298,19 @@ $packageInfo = winget show $PackageId
                 VersionValue         = $PackageVersion
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
+            Write-Verbose " Creating detection rule using file and version"
         }
-        Else {
+        else {
             Write-Error -Message "Cannot create the detection rule - check application path and executable."
             Write-Host -ForegroundColor "Cyan" "Path: $AppPath."
             Write-Host -ForegroundColor "Cyan" "Exe: $AppExecutable."
             Break
         }
-        If ($DetectionRule1 -and $DetectionRule2) {
+        
+        if ($DetectionRule1 -and $DetectionRule2) {
             $DetectionRule = @($DetectionRule1, $DetectionRule2)
         }
-        Else {
+        else {
             Write-Error -Message "Failed to create the detection rule."
             Break
         }
@@ -319,27 +324,35 @@ $packageInfo = winget show $PackageId
 
         # Add new EXE Win32 app
         # Requires a connection via Connect-MSIntuneGraph first
-        If ($PSBoundParameters.Keys.Contains("Upload")) {
+
+        #if ($PrivacyURL -notmatch "http"){
+            $PrivacyURL = $PublisherUrl
+        #}
+
+        if ($PSBoundParameters.Keys.Contains("Upload")) {
+            $params = @{
+                FilePath                 = $IntuneWinFile.FullName
+                DisplayName              = $DisplayName
+                Description              = $Description
+                Publisher                = $Publisher
+                InformationURL           = $InformationURL
+                PrivacyURL               = $PrivacyURL
+                CompanyPortalFeaturedApp = $false
+                InstallExperience        = $InstallExperience
+                RestartBehavior          = "suppress"
+                DetectionRule            = $DetectionRule
+                RequirementRule          = $RequirementRule
+                InstallCommandLine       = $InstallCommandLine
+                UninstallCommandLine     = $UninstallCommandLine
+                AppVersion               = $PackageVersion
+                Icon                     = $Icon
+                Verbose                  = $true
+            }
+            $params | Write-Output
             try {
-                $params = @{
-                    FilePath                 = $IntuneWinFile.FullName
-                    DisplayName              = $DisplayName
-                    Description              = $Description
-                    Publisher                = $Publisher
-                    InformationURL           = $InformationURL
-                    PrivacyURL               = $PrivacyURL
-                    CompanyPortalFeaturedApp = $false
-                    InstallExperience        = $InstallExperience
-                    RestartBehavior          = "suppress"
-                    DetectionRule            = $DetectionRule
-                    RequirementRule          = $RequirementRule
-                    InstallCommandLine       = $InstallCommandLine
-                    UninstallCommandLine     = $UninstallCommandLine
-                    AppVersion               = $PackageVersion
-                    Icon                     = $Icon
-                    Verbose                  = $true
-                }
+               
                 $null = Add-IntuneWin32App @params
+                
             }
             catch [System.Exception] {
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"

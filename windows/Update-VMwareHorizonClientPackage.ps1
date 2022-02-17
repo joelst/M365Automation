@@ -55,7 +55,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "vmware-view.exe",
 
-    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
     
     $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>",
 

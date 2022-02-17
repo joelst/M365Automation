@@ -49,7 +49,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $AppExecutable = "7z.exe",
 
-    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/Logos/$($PackageId)-Logo.png",
+    $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [switch]$Force
     
@@ -343,7 +343,7 @@ if ($PrivacyURL -eq "")
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = "1909"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
