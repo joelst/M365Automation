@@ -53,7 +53,6 @@ Param (
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [switch]$Force
-
     
 )
     

@@ -37,11 +37,11 @@ Param (
     $PackageId = "Adobe.Acrobat.Reader.64-bit",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{AC76BA86-1033-1033-7760-BC15014EA700}",
+    $ProductCode = "{E3EBB36F-B92A-40EC-824A-7287D483EEAC}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
-    $InstallExperience = "User",
+    $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
     $AppPath = "$env:ProgramFiles\Adobe\Acrobat DC\Acrobat",
