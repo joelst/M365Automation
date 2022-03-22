@@ -226,13 +226,13 @@ if ($PrivacyURL -eq "")
         #region Package the app
         # Download the Package
         # TODO - Check the hash to make sure the file is valid
-        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $PackagePath -Leaf)"
+        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)"
         $packageFile = Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)
         try {
             Invoke-WebRequest -Uri $DownloadUrl -OutFile $packageFile -UseBasicParsing
         }
         catch [System.Exception] {
-            Write-Error -Message "MEM Win32 Content Prep tool failed with: $($_.Exception.Message)"
+            Write-Error -Message "Package download error: $($_.Exception.Message)"
             Break
         }
 

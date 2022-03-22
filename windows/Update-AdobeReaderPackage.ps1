@@ -171,7 +171,7 @@ else {
             Write-Host "        Package already exists, exiting process!`n"
             exit
         }
-        else{
+        else {
             Write-Host "        Package already exists, Force parameter detected!`n"
         }
     }
@@ -180,15 +180,15 @@ else {
     }
 
     # Download installer with winget
-    If ($PackageName) {
+    if ($PackageName) {
  
         # Test to make sure the paths we need are available.
-        If ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true)
+        if ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true)
         {
             $null = New-Item -Path $path -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
         }
 
-        If ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true)
+        if ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true)
         {
            $null =  New-Item -Path $PackageOutputPath -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
         }
@@ -196,7 +196,7 @@ else {
         # Create the package folder
         $PackagePath = Join-Path -Path $Path -ChildPath "Package"
         Write-Host -ForegroundColor "Cyan" "    Package path: $PackagePath"
-        If (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
+        if (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
         $PackageOutputPath = Join-Path -Path $PackageOutputPath -ChildPath "Output"
         Write-Host -ForegroundColor "Cyan" "    Output path: $PackageOutputPath"
 
@@ -205,13 +205,13 @@ else {
         #region Package the app
         # Download the Package
         # TODO - Check the hash to make sure the file is valid
-        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $PackagePath -Leaf)"
+        Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)"
         $packageFile = Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)
         try {
             Invoke-WebRequest -Uri $DownloadUrl -OutFile $packageFile -UseBasicParsing
         }
         catch [System.Exception] {
-            Write-Error -Message "MEM Win32 Content Prep tool failed with: $($_.Exception.Message)"
+            Write-Error -Message "Package download error: $($_.Exception.Message)"
             Break
         }
 
