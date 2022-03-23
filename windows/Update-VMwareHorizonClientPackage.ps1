@@ -154,8 +154,8 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && AppInstallerCLI.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements --override '--silent $SupplementalInstallCmd'"
-    $UpgradeCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && AppInstallerCLI.exe upgrade --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
+    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements --override '--silent $SupplementalInstallCmd'"
+    $UpgradeCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe upgrade --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 
