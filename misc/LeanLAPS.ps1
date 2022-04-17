@@ -15,20 +15,23 @@
     Minor adjustments by:   Joel Stidley 2/21/2022 https://github.com/joelst/
         - Updated password generator to remove commonly confused characters, like i and l and 1 
 #>
+[CmdletBinding()]
+param (
+    ####CONFIG
+    $minimumPasswordLength = 21,
+    $publicEncryptionKey = "", # If you supply a public encryption key, leanLaps will use this to encrypt the password, ensuring it will only be in encrypted form in Proactive Remediations
+    $localAdminName = "LocalAdmin",
+    $removeOtherLocalAdmins = $true, # if set to True, will remove ALL other local admins, including those set through AzureAD device settings
+    $disableBuiltinAdminAccount = $false, #Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
+    $doNotRunOnServers = $true, # Built-in protection in case an admin accidentally assigns this script to e.g. a domain controller
+    # Specify SIDs for Azure groups such as Global Admins and Device Administrators or for local or domain users to not remove from local admins. These are specific to your tenant, you can get them on a device by running: 
+    # ([ADSI]::new("WinNT://$($env:COMPUTERNAME)/$((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]).Value.Split("\")[1]),Group")).Invoke('Members') | % {"$((New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList @([Byte[]](([ADSI]$_).properties.objectSid).Value, 0)).Value) <--- a.k.a: $(([ADSI]$_).Path.Split("/")[-1])"}
+    $approvedAdmins = @( 
 
-####CONFIG
-$minimumPasswordLength = 20
-$publicEncryptionKey = "" # If you supply a public encryption key, leanLaps will use this to encrypt the password, ensuring it will only be in encrypted form in Proactive Remediations
-$localAdminName = "LocalAdmin"
-$removeOtherLocalAdmins = $true #if set to True, will remove ALL other local admins, including those set through AzureAD device settings
-$disableBuiltinAdminAccount = $False #Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
-$doNotRunOnServers = $true # Built-in protection in case an admin accidentally assigns this script to e.g. a domain controller
-$markerFile = Join-Path $Env:TEMP -ChildPath "LeanLAPS.marker"
-# Specify SIDs for Azure groups such as Global Admins and Device Administrators or for local or domain users to not remove from local admins. These are specific to your tenant, you can get them on a device by running: 
-# ([ADSI]::new("WinNT://$($env:COMPUTERNAME)/$((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]).Value.Split("\")[1]),Group")).Invoke('Members') | % {"$((New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList @([Byte[]](([ADSI]$_).properties.objectSid).Value, 0)).Value) <--- a.k.a: $(([ADSI]$_).Path.Split("/")[-1])"}
-$approvedAdmins = @( 
-
+    )
 )
+
+$markerFile = Join-Path $Env:TEMP -ChildPath "LeanLAPS.marker"
 
 function Get-NewPassword {
     <#
@@ -114,7 +117,6 @@ The script is provided "AS IS" with no warranties.
 .PARAMETER ObjectID
 The SID to convert
 #>
-
     param([String] $Sid)
 
     $text = $sid.Replace('S-1-12-1-', '')
@@ -127,12 +129,20 @@ The SID to convert
     return $guid
 }
 
-function Write-CustomEventLog($Message) {
+function Write-CustomEventLog {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [string]
+        $Message
+    )
+
     $EventSource = "LeanLAPS"
     if ([System.Diagnostics.EventLog]::Exists('Application') -eq $False -or [System.Diagnostics.EventLog]::SourceExists($EventSource) -eq $False) {
-        $res = New-EventLog -LogName Application -Source $EventSource | Out-Null
+        $null = New-EventLog -LogName Application -Source $EventSource | Out-Null
     }
-    $res = Write-EventLog -LogName Application -Source $EventSource -EntryType Information -EventId 1985 -Message $Message
+
+    $null = Write-EventLog -LogName Application -Source $EventSource -EntryType Information -EventId 1985 -Message $Message
 }
 
 Write-CustomEventLog "LeanLAPS starting on $($ENV:COMPUTERNAME) as $($MyInvocation.MyCommand.Name)"
@@ -207,17 +217,24 @@ try {
         $res = Add-LocalGroupMember -Group $administratorsGroupName -Member $localAdminName -Confirm:$False -ErrorAction Stop
         Write-CustomEventLog "Added $localAdminName to the local administrators group"
     }
+    
+    # Disable built in admin account if specified
+    foreach ($administrator in $administrators) {
+        if ($administrator.EndsWith("-500")) {
+            if ($disableBuiltinAdminAccount) {
+                if ((Get-LocalUser -SID $administrator).Enabled) {
+                    $res = Disable-LocalUser -SID $administrator -Confirm:$False
+                    Write-CustomEventLog "Disabled $($administrator) because it is a built-in account and `$disableBuiltinAdminAccount is set to `$True"
+                }
+            }
+        }
+    }
+    
     # Remove other local admins if specified, only executes if adding the new local admin succeeded
     if ($removeOtherLocalAdmins) {
         foreach ($administrator in $administrators) {
             if ($administrator.EndsWith("-500")) {
                 Write-CustomEventLog "Not removing $($administrator) because it is a built-in account and cannot be removed"
-                if ($disableBuiltinAdminAccount) {
-                    if ((Get-LocalUser -SID $administrator).Enabled) {
-                        $res = Disable-LocalUser -SID $administrator -Confirm:$False
-                        Write-CustomEventLog "Disabled $($administrator) because it is a built-in account and `$disableBuiltinAdminAccount is set to `$True"
-                    }
-                }
                 continue
             }
             if ($administrator -ne $localAdmin.SID.Value -and $approvedAdmins -notcontains $administrator) {
@@ -245,9 +262,13 @@ if (!$pwdSet) {
         Write-CustomEventLog "Setting password for $localAdminName ..."
         $newPwd = Get-NewPassword $minimumPasswordLength
         $newPwdSecStr = ConvertTo-SecureString $newPwd -AsPlainText -Force
-        $pwdSet = $True
-        $res = Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true -Name $localAdminName
-        Write-CustomEventLog "Password for $localAdminName set to a new value, see MDE"
+        $pwdSet = $true
+        # These two lines are to set the password another way to make sure that Set-LocalUser works later
+        $LocalDirectory = [ADSI]::new(('WinNT://{0}'-f$env:COMPUTERNAME))
+        $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword',$NewPwd)
+        
+        $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true
+        Write-CustomEventLog "Password for $localAdminName set to a new value, see MEM"
     }
     catch {
         Write-CustomEventLog "Failed to set new password for $localAdminName"
@@ -257,5 +278,5 @@ if (!$pwdSet) {
 }
 
 Write-Host "LeanLAPS ran successfully for $($localAdminName)"
-$res = Set-Content -Path $markerFile -Value (ConvertFrom-SecureString $newPwdSecStr) -Force -Confirm:$False
+$res = Set-Content -Path $markerFile -Value (ConvertFrom-SecureString $newPwdSecStr) -Force -Confirm:$false
 Exit 1

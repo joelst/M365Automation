@@ -17,7 +17,7 @@ function Set-RegInfo {
 
 $ErrorActionPreference = "Continue"
 
-Start-Transcript -Path "$env:TEMP\MEMBitlockFix-$(Get-Date -f MMdd-HHmm).txt"
+Start-Transcript -Path "$env:TEMP\MEMBitlock-$(Get-Date -f MMddHHmm).txt"
 #Check BitLocker prerequisites
 $TPMNotEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $false } -ErrorAction SilentlyContinue
 $TPMEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $true } -ErrorAction SilentlyContinue
@@ -39,37 +39,10 @@ if ($WindowsVer -and $TPMEnabled -and !$BitLockerReadyDrive) {
 }
 
 #Step 3 - Check BitLocker AD Key backup Registry values exist and if not, create them.
-$BitLockerRegLoc = 'HKLM:\SOFTWARE\Policies\Microsoft'
+$BitLockerRegLoc = "HKLM:\SOFTWARE\Policies\Microsoft"
 if (Test-Path "$BitLockerRegLoc\FVE") {
-    Write-Verbose '$BitLockerRegLoc\FVE Key already exists' -Verbose
-    New-Item -Path "$BitLockerRegLoc" -Name 'FVE'
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'ActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'RequireActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'ActiveDirectoryInfoToStore' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'EncryptionMethodNoDiffuser' -Value '00000003' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'EncryptionMethodWithXtsOs' -Value '00000006' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'EncryptionMethodWithXtsFdv' -Value '00000006' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'EncryptionMethodWithXtsRdv' -Value '00000003' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'EncryptionMethod' -Value '00000003' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSRecovery' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSManageDRA' -Value '00000000' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSRecoveryPassword' -Value '00000002' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSRecoveryKey' -Value '00000002' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSHideRecoveryPage' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSActiveDirectoryInfoToStore' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSRequireActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSAllowSecureBootForIntegrity' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'OSEncryptionType' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVRecovery' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVManageDRA' -Value '00000000' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVRecoveryPassword' -Value '00000002' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVRecoveryKey' -Value '00000002' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVHideRecoveryPage' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVActiveDirectoryInfoToStore' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVRequireActiveDirectoryBackup' -Value '00000001' -PropertyType DWORD
-    Set-RegInfo -Path "$BitLockerRegLoc\FVE" -Name 'FDVEncryptionType' -Value '00000001' -PropertyType DWORD
+    Write-Output "Removing $BitLockerRegLoc\FVE key"
+    Remove-Item -Path "$BitLockerRegLoc\FVE"
 }
 else {
     New-Item -Path "$BitLockerRegLoc" -Name 'FVE'
