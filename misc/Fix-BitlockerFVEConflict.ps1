@@ -7,7 +7,7 @@ function Set-RegInfo {
         $PropertyType
     )
     
-# Create the key if it does not exist
+# Create key if it does not exist
     if (-NOT (Test-Path $Path)) {
     New-Item -Path $Path -Force | Out-Null
     }  
@@ -17,30 +17,31 @@ function Set-RegInfo {
 
 $ErrorActionPreference = "Continue"
 
-Start-Transcript -Path "$env:TEMP\MEMBitlock-$(Get-Date -f MMddHHmm).txt"
-#Check BitLocker prerequisites
+Start-Transcript -Path "$env:TEMP\MEMBLocker-$(Get-Date -f MMddHHmm).txt"
+
+# Check Bitlocker prerequisites
 $TPMNotEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $false } -ErrorAction SilentlyContinue
 $TPMEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $true } -ErrorAction SilentlyContinue
 $WindowsVer = Get-CimInstance -Query 'select * from Win32_OperatingSystem where (Version like "6.2%" or Version like "6.3%" or Version like "10.0%") and ProductType = "1"' -ErrorAction SilentlyContinue
 $BitLockerReadyDrive = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue
-$BitLockerDecrypted = Get-BitLockerVolume -MountPoint $env:SystemDrive | where { $_.VolumeStatus -eq "FullyDecrypted" } -ErrorAction SilentlyContinue
+$BitLockerDecrypted = Get-BitLockerVolume -MountPoint $env:SystemDrive | Where-Object { $_.VolumeStatus -eq "FullyDecrypted" } -ErrorAction SilentlyContinue
 $BLVS = Get-BitLockerVolume | Where-Object { $_.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } } -ErrorAction SilentlyContinue
 
 
-#Step 1 - Check if TPM is enabled and initialise if required
+# Step 1 - Check if TPM is enabled and initialize, if required
 if ($WindowsVer -and !$TPMNotEnabled) {
     Initialize-Tpm -AllowClear -AllowPhysicalPresence -ErrorAction SilentlyContinue
 }
 
-#Step 2 - Check if BitLocker volume is provisioned and partition system drive for BitLocker if required
+# Step 2 - Check if BitLocker volume is provisioned and partition system drive for Bitlocker if required
 if ($WindowsVer -and $TPMEnabled -and !$BitLockerReadyDrive) {
     Get-Service -Name defragsvc -ErrorAction SilentlyContinue | Set-Service -Status Running -ErrorAction SilentlyContinue
     BdeHdCfg -target $env:SystemDrive shrink -quiet
 }
 
-#Step 3 - Check BitLocker AD Key backup Registry values exist and if not, create them.
+# Step 3 - Check Bitlocker AD Key backup registry values exist and if not, create them.
 $BitLockerRegLoc = "HKLM:\SOFTWARE\Policies\Microsoft"
-if (Test-Path "$BitLockerRegLoc\FVE") {
+if (Test-Path "$BitLockerRegLoc\FVE" -and $TPMNotEnabled) {
     Write-Output "Removing $BitLockerRegLoc\FVE key"
     Remove-Item -Path "$BitLockerRegLoc\FVE"
 }
@@ -75,18 +76,19 @@ else {
     New-ItemProperty -Path "$BitLockerRegLoc\FVE" -Name 'FDVEncryptionType' -Value '00000001' -PropertyType DWORD
 }
 
-#Step 4 - If all prerequisites are met, then enable BitLocker
+# Step 4 - If all prerequisites are met, then enable Bitlocker
 if ($WindowsVer -and $TPMEnabled -and $BitLockerReadyDrive -and $BitLockerDecrypted) {
     Add-BitLockerKeyProtector -MountPoint $env:SystemDrive -TpmProtector
     Enable-BitLocker -MountPoint $env:SystemDrive -RecoveryPasswordProtector -ErrorAction SilentlyContinue
 }
 
-#Step 5 - Backup BitLocker recovery passwords to AD
+# Step 5 - Backup Bitlocker recovery passwords to AD
 if ($BLVS) {
     ForEach ($BLV in $BLVS) {
         $Key = $BLV | Select-Object -ExpandProperty KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' }
         ForEach ($obj in $key) { 
-            Backup-BitLockerKeyProtector -MountPoint $BLV.MountPoint -KeyProtectorId $obj.KeyProtectorId
+            Backup-BitLockerKeyProtector -MountPoint $BLV.MountPoint -KeyProtectorId $obj.KeyProtectorId -ErrorAction SilentlyContinue
+            BackupToAAD-BitLockerKeyProtector -MountPoint $BLV.MountPoint -KeyProtectorId $obj.KeyProtectorId -ErrorAction SilentlyContinue
         }
     }
 }

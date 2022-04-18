@@ -9,6 +9,8 @@ Requirements: Dell Command Monitor Installed (Unless this is a pretty new model,
 Big thanks to the original developer: Gary Blok | @gwblok | recastsoftware.com
 https://github.com/gwblok/garytown/blob/master/Intune/
 
+Minor adjustments by:   Joel Stidley https://github.com/joelst/
+
 I've updated a few things.
 - Moved many things to be parameters instead of just variables.
 - Updated CMtrace logging to streamline logging and screen output

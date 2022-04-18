@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Updates Bios on DELL machines by finding latest version avialble in Dell Command Update XML, Downloading and installing, then triggers a restart
+Updates Bios on DELL machines by finding latest version available in Dell Command Update XML, Downloading and installing, then triggers a restart
 
 Remediation & Detection Scripts are the same, just change the variable $Remediate. ($false = Detect | $true = Remediate)
 
@@ -8,6 +8,8 @@ Requirements: Dell Command Monitor Installed (Unless this is a pretty new model,
 
 Big thanks to the original developer: Gary Blok | @gwblok | recastsoftware.com
 https://github.com/gwblok/garytown/blob/master/Intune/
+
+Minor adjustments by:   Joel Stidley https://github.com/joelst/
 
 I've updated a few things.
 - Moved many things to be parameters instead of just variables.

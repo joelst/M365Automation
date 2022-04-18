@@ -5,6 +5,11 @@ Updates  on DELL machines by finding latest version available in Dell Command Up
 Big thanks to the original developer: Gary Blok | @gwblok | recastsoftware.com
 https://github.com/gwblok/garytown/blob/master/Intune/
 
+Minor adjustments by:   Joel Stidley https://github.com/joelst/
+- Made many options as parameters
+- Simplified proxy usage
+- fixed issue when release has multiple dates assigned.
+- streamlined logging
 
 #>
 [CmdletBinding()]
@@ -24,7 +29,6 @@ param (
     $BitsProxyList
 )
 
-
 $SystemSKUNumber = (Get-CimInstance -ClassName Win32_ComputerSystem).SystemSKUNumber
 $Manufacturer = (Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer
 $CabPath = "$env:temp\DellCabDownloads\DellSDPCatalogPC.cab"
@@ -35,7 +39,6 @@ $DellCabExtractPath = "$env:temp\DellCabDownloads\DellCabExtract"
 if ($Remediate -eq $true)
 { $ComponentText = "DCU Apps - Remediation" }
 else { $ComponentText = "DCU Apps - Detection" }
-
 
 if (!(Test-Path -Path $LogFilePath)) { $NewFolder = New-Item -Path $LogFilePath -ItemType Directory -Force }
 
@@ -62,7 +65,7 @@ Function Get-InstalledApplication {
         [String]$Publisher
     )
     Begin {
-        Function IsCpuX86 ([Microsoft.Win32.RegistryKey]$hklmHive) {
+        function IsCpuX86 ([Microsoft.Win32.RegistryKey]$hklmHive) {
             $regPath = 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
             $key = $hklmHive.OpenSubKey($regPath)
 
@@ -83,7 +86,7 @@ Function Get-InstalledApplication {
                 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
             )
 
-            Try {
+            try {
                 $hive = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey(
                     [Microsoft.Win32.RegistryHive]::LocalMachine, 
                     $computer
@@ -160,7 +163,7 @@ Function Get-InstalledApplication {
                     }
                 }
             }
-            Catch {
+            catch {
                 Write-Error $_
             }
         }
@@ -246,8 +249,12 @@ if ($Manufacturer -match "Dell") {
     $InstalledDCM = $InstallApps | Where-Object { $_.Name -eq 'Dell Command | Monitor' }
     $InstalledDCU = $InstallApps | Where-Object { $_.Name -match 'Dell Command' -and $_.Name -match 'Update' }
 
-    If ($InstalledDCM) { [Version]$DCM_InstalledVersion = $InstalledDCM.Version }
-    If ($InstalledDCU) { [Version]$DCU_InstalledVersion = $InstalledDCU.Version }
+    if ($InstalledDCM) { 
+        [Version]$DCM_InstalledVersion = $InstalledDCM.Version 
+    }
+    if ($InstalledDCU) { 
+        [Version]$DCU_InstalledVersion = $InstalledDCU.Version 
+    }
 
     # Test if proxy is ok
     if ($UseProxy) {
@@ -264,23 +271,32 @@ if ($Manufacturer -match "Dell") {
         }
     }
 
-    # Pull down Dell XML CAB used in Dell Command Update ,extract and Load
-    if (!(Test-Path $DellCabExtractPath)) { $newfolder = New-Item -Path $DellCabExtractPath -ItemType Directory -Force }
+    # Download and parse Dell Command Update XML
+    if (!(Test-Path $DellCabExtractPath)) { 
+        $newfolder = New-Item -Path $DellCabExtractPath -ItemType Directory -Force 
+    }
+
     Write-Host "Downloading Dell Cab" -ForegroundColor Yellow
     Invoke-WebRequest -Uri "https://downloads.dell.com/catalog/CatalogIndexPC.cab" -OutFile $CabPathIndex -UseBasicParsing -Proxy $ProxyServer
     [int32]$n = 1
-    While (!(Test-Path $CabPathIndex) -and $n -lt '3') {
+    
+    while (!(Test-Path $CabPathIndex) -and $n -lt '3') {
         Invoke-WebRequest -Uri "https://downloads.dell.com/catalog/CatalogIndexPC.cab" -OutFile $CabPathIndex -UseBasicParsing -Proxy $ProxyServer
         $n++
     }
-    If (Test-Path "$DellCabExtractPath\DellSDPCatalogPC.xml") { Remove-Item -Path "$DellCabExtractPath\DellSDPCatalogPC.xml" -Force }
+    if (Test-Path "$DellCabExtractPath\DellSDPCatalogPC.xml") { 
+        Remove-Item -Path "$DellCabExtractPath\DellSDPCatalogPC.xml" -Force 
+    }
     Start-Sleep -Seconds 1
-    if (Test-Path $DellCabExtractPath) { Remove-Item -Path $DellCabExtractPath -Force -Recurse }
+    if (Test-Path $DellCabExtractPath) { 
+        Remove-Item -Path $DellCabExtractPath -Force -Recurse 
+    }
+    
     $NewFolder = New-Item -Path $DellCabExtractPath -ItemType Directory
     $Expand = expand $CabPathIndex $DellCabExtractPath\CatalogIndexPC.xml
 
     Write-Host "Loading Dell catalog..." -ForegroundColor Yellow
-    [xml]$XMLIndex = Get-Content "$DellCabExtractPath\CatalogIndexPC.xml" -Verbose
+    [xml]$XMLIndex = Get-Content "$DellCabExtractPath\CatalogIndexPC.xml"
 
     # Find this computer model info in the file  (Based on System SKU)
     $XMLModel = $XMLIndex.ManifestIndex.GroupManifest | Where-Object { $_.SupportedSystems.Brand.Model.systemID -match $SystemSKUNumber }
@@ -322,15 +338,14 @@ if ($Manufacturer -match "Dell") {
             
             if ($DCUVersion -gt $CurrentVersion) {
                 if ($CurrentVersion -eq $null) { 
-                    [String]$CurrentVersion = "Not Installed" 
+                    [String]$CurrentVersion = "Not installed" 
                 }
                 if ($Remediate -eq $true) {
                     New-CMTraceLog -Message "Update available: Installed = $CurrentVersion DCU = $DCUVersion" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "  ----------------------------" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "    Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "   Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   KB: $($DellItem.releaseID)" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Link: $TargetLink" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Info: $($DellItem.ImportantInfo.URL)" -Type 1 -LogFile $LogFile
@@ -338,19 +353,19 @@ if ($Manufacturer -match "Dell") {
 
                     # Build info to download and Update CM Package
                     $TargetFilePathName = "$($DellCabExtractPath)\$($TargetFileName)"
-                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Verbose -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
-                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Verbose -Proxy $ProxyServer
+                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
+                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
 
                     #Confirm Download
                     if (Test-Path $TargetFilePathName) {
-                        New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
+                        New-CMTraceLog -Message "   Download completed " -Type 1 -LogFile $LogFile
                         $LogFileName = $TargetFilePathName.replace(".exe", ".log")
                         $Arguments = "/s /l=$LogFileName"
-                        Write-Output "Starting Update"
+                        Write-Output "Starting update"
                         Write-Output "Log file = $LogFileName"
                         New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
                         $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
-                        New-CMTraceLog -Message " Update Complete with Exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
+                        New-CMTraceLog -Message " Update completed with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
 
                         If ($Process -ne $null -and $Process.ExitCode -eq '2') {
                             $RestartComputer = $true
@@ -363,21 +378,22 @@ if ($Manufacturer -match "Dell") {
                 }
                 else {
                     #Needs Remediation
-                    New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
                     $Compliance = $false
                 }
             
             }
             else {
                 #Compliant
-                New-CMTraceLog -Message " Update in DCU XML for $($DellItem.Name.Display.'#cdata-section') same as installed version: $CurrentVersion" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message " Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion" -Type 1 -LogFile $LogFile
             }
 
             # Check DCM Now
             $DellItem = $AppDCM
-            If ($InstalledDCM) { [Version]$CurrentVersion = $InstalledDCM.Version }
-            Else { $CurrentVersion = $null }
-
+            if ("" -ne $InstalledDCM) { 
+                [Version]$CurrentVersion = $InstalledDCM.Version 
+            }
+            else { $CurrentVersion = $null }
 
             [Version]$DCUVersion = $DellItem.vendorVersion
             $DCUReleaseDate = $(Get-Date $DellItem.releaseDate -Format 'yyyy-MM-dd')               
@@ -387,12 +403,11 @@ if ($Manufacturer -match "Dell") {
             if ($DCUVersion -gt $CurrentVersion) {
                 if ($CurrentVersion -eq $null) { [String]$CurrentVersion = "Not Installed" }
                 if ($Remediate -eq $true) {
-                    New-CMTraceLog -Message "New Update available: Installed = $CurrentVersion DCU = $DCUVersion" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update available: Installed = $CurrentVersion DCU = $DCUVersion" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "  ----------------------------" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "    Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "   Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   KB: $($DellItem.releaseID)" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Link: $TargetLink" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Info: $($DellItem.ImportantInfo.URL)" -Type 1 -LogFile $LogFile
@@ -400,8 +415,8 @@ if ($Manufacturer -match "Dell") {
 
                     #Build Required Info to Download and Update CM Package
                     $TargetFilePathName = "$($DellCabExtractPath)\$($TargetFileName)"
-                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Verbose -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
-                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Verbose -Proxy $ProxyServer
+                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
+                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
 
                     #Confirm Download
                     if (Test-Path $TargetFilePathName) {
@@ -412,7 +427,7 @@ if ($Manufacturer -match "Dell") {
                         Write-Output "Starting update..."
                         New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
                         $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
-                        New-CMTraceLog -Message " Update Complete with Exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
+                        New-CMTraceLog -Message " Update complete with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
                     
                         If ($Process -ne $null -and $Process.ExitCode -eq '2') {
                             $RestartComputer = $true
@@ -426,32 +441,32 @@ if ($Manufacturer -match "Dell") {
                 else {
                     #Needs Remediation
                     #$DellItem.Name.Display.'#cdata-section'
-                    New-CMTraceLog -Message "New Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
                     $Compliance = $false
                 }
             
             }
             else {
                 #Compliant
-                New-CMTraceLog -Message " Update in DCU XML for $($DellItem.Name.Display.'#cdata-section') same as Installed Version: $CurrentVersion" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message " Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion" -Type 1 -LogFile $LogFile
             }
         }
         else {
             #No Cab with XML was able to download
-            New-CMTraceLog -Message "No Cab Downloaded" -Type 2 -LogFile $LogFile
+            New-CMTraceLog -Message "No cab file downloaded" -Type 2 -LogFile $LogFile
         }
     }
     else {
         #No Match in the DCU XML for this Model (SKUNumber)
-        New-CMTraceLog -Message "No Match in XML for $SystemSKUNumber" -Type 2 -LogFile $LogFile
+        New-CMTraceLog -Message "No match for $SystemSKUNumber" -Type 2 -LogFile $LogFile
     }
 
     if ($Compliance -eq $false) {
-        New-CMTraceLog -Message "Exit Script Non-Compliant" -Type 2 -LogFile $LogFile
+        New-CMTraceLog -Message "Exit script as non-compliant" -Type 2 -LogFile $LogFile
         exit 1
     }
     if ($RestartComputer -eq $true) { Restart-ByPassComputer }
 }
 else {
-    New-CMTraceLog -Message "This isn't a Dell... exiting... check with admin on why this is running.  Script should only be applied to a dynamic group that contains Dell computers." -Type 2 -LogFile $LogFile
+    New-CMTraceLog -Message "This isn't a Dell computer exiting...`n     This script should only be run on Dell computers." -Type 2 -LogFile $LogFile
 }
