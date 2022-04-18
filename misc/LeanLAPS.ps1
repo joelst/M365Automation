@@ -14,6 +14,7 @@
     inspired by:            Rudy Ooms; https://call4cloud.nl/2021/05/the-laps-reloaded/
     Minor adjustments by:   Joel Stidley 2/21/2022 https://github.com/joelst/
         - Updated password generator to remove commonly confused characters, like i and l and 1 
+        - Added Set-LocalUser try/catch if there are errors using ADSI password set option.
 #>
 [CmdletBinding()]
 param (
@@ -263,11 +264,17 @@ if (!$pwdSet) {
         $newPwd = Get-NewPassword $minimumPasswordLength
         $newPwdSecStr = ConvertTo-SecureString $newPwd -AsPlainText -Force
         $pwdSet = $true
-        # These two lines are to set the password another way to make sure that Set-LocalUser works later
-        $LocalDirectory = [ADSI]::new(('WinNT://{0}'-f$env:COMPUTERNAME))
-        $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword',$NewPwd)
-        
-        $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true
+       
+        try {
+            $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true
+        }
+        catch 
+        {
+            # If Set-LocalUser fails, set password using ADSI, this should also ensure that Set-LocalUser works next time.
+            $LocalDirectory = [ADSI]::new(('WinNT://{0}'-f$env:COMPUTERNAME))
+            $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword',$NewPwd)
+        }
+
         Write-CustomEventLog "Password for $localAdminName set to a new value, see MEM"
     }
     catch {
@@ -279,4 +286,4 @@ if (!$pwdSet) {
 
 Write-Host "LeanLAPS ran successfully for $($localAdminName)"
 $res = Set-Content -Path $markerFile -Value (ConvertFrom-SecureString $newPwdSecStr) -Force -Confirm:$false
-Exit 1
+exit 1
