@@ -25,8 +25,6 @@ $TPMEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsoft
 $WindowsVer = Get-CimInstance -Query 'select * from Win32_OperatingSystem where (Version like "6.2%" or Version like "6.3%" or Version like "10.0%") and ProductType = "1"' -ErrorAction SilentlyContinue
 $BitLockerReadyDrive = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue
 $BitLockerDecrypted = Get-BitLockerVolume -MountPoint $env:SystemDrive | Where-Object { $_.VolumeStatus -eq "FullyDecrypted" } -ErrorAction SilentlyContinue
-$BLVS = Get-BitLockerVolume | Where-Object { $_.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } } -ErrorAction SilentlyContinue
-
 
 # Step 1 - Check if TPM is enabled and initialize, if required
 if ($WindowsVer -and !$TPMNotEnabled) {
@@ -82,6 +80,7 @@ if ($WindowsVer -and $TPMEnabled -and $BitLockerReadyDrive -and $BitLockerDecryp
     Enable-BitLocker -MountPoint $env:SystemDrive -RecoveryPasswordProtector -ErrorAction SilentlyContinue
 }
 
+$BLVS = Get-BitLockerVolume | Where-Object { $_.KeyProtector | Where-Object { $_.KeyProtectorType -eq 'RecoveryPassword' } } -ErrorAction SilentlyContinue
 # Step 5 - Backup Bitlocker recovery passwords to AD
 if ($BLVS) {
     ForEach ($BLV in $BLVS) {

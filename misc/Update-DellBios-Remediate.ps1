@@ -16,6 +16,9 @@ I've updated a few things.
 - Updated CMtrace logging to streamline logging and screen output
 - Removed default proxy server info and added a $UseProxy parameter that is $false by default.
 
+Usage: Create a proactive remediation script package and include Update-DellBios-Detect.ps1 as the detection script and 
+  Update-DellBios-Remediate.ps1 as the remediate script. Assign the package to run on only Dell PCs.
+
 #>
 
 [CmdletBinding()]
@@ -45,7 +48,7 @@ if ($Remediate -eq $true)
 { $ComponentText = "MEM - Remediation" }
 else { $ComponentText = "MEM - Detection" }
 
-if (!(Test-Path -Path $LogFilePath)) { $null = New-Item -Path $LogFilePath -ItemType Directory -Force -ErrorAction SilentlyContinue }
+if (!(Test-Path -Path $LogFilePath)) { $null = New-Item -Path $LogFilePath -ItemType Directory -Force -ErrorAction SilentlyContinue}
 
 function New-CMTraceLog {
     [CmdletBinding()]
@@ -79,18 +82,18 @@ function New-CMTraceLog {
     $LogMessage = "<![LOG[$Message $ErrorMessage" + "]LOG]!><time=`"$Time`" date=`"$Date`" component=`"$Component`" context=`"`" type=`"$Type`" thread=`"`" file=`"`">"
     $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 
-    if ($Type -eq 1) {
-        Write-Output $Message
+if ($Type -eq 1) {
+    Write-Output $Message
     }
-    elseif ($Type -eq 2) {
-        Write-Warning $Message
-    }
-    elseif ($Type -eq 3) {
-        Write-Error $Message
-    }
-    else {
-        Write-Host $Message
-    }
+elseif ($Type -eq 2) {
+    Write-Warning $Message
+}
+elseif ($Type -eq 3) {
+    Write-Error $Message
+}
+else {
+    Write-Host $Message
+}
     
 }
 
@@ -108,8 +111,8 @@ Function Restart-ByPassComputer {
         Start-Process shutdown.exe -ArgumentList '/r /f /t 3600 /c "Your computer needs a BIOS update. Please save your work and restart otherwise your computer will restart in 60 minutes!"'
     }
     else {
-        New-CMTraceLog -Message "No User Session Found, Restarting in 5 Seconds" -Type 1 -LogFile $LogFile
-        Start-Process shutdown.exe -ArgumentList '/r /f /t 5 /c "Updating Bios, Computer will restart in 5 seconds"'
+       New-CMTraceLog -Message "No User Session Found, Restarting in 5 Seconds" -Type 1 -LogFile $LogFile
+       Start-Process shutdown.exe -ArgumentList '/r /f /t 5 /c "Updating Bios, Computer will restart in 5 seconds"'
     }
 
 }  
@@ -136,8 +139,7 @@ if ($UseProxy) {
 # Get Dell BIOS Info ##########################
 try {
 
-    if ($BIOS.SMBIOSBIOSVersion -match "A") {
-        #Deal with Versions with A
+    if ($BIOS.SMBIOSBIOSVersion -match "A") { #Deal with Versions with A
         [String]$CurrentBIOSVersion = $BIOS.SMBIOSBIOSVersion
     }
     else {
@@ -147,7 +149,7 @@ try {
 catch { 
     $CurrentBIOSVersion = $null
     
-}
+    }
 
 
 # Pull down Dell XML CAB used in Dell Command Update ,extract and Load
@@ -163,14 +165,13 @@ while (!(Test-Path $CabPathIndex) -and $n -lt '3') {
 
 if (Test-Path "$DellCabExtractPath\DellSDPCatalogPC.xml") { 
     Remove-Item -Path "$DellCabExtractPath\DellSDPCatalogPC.xml" -Force 
-}
+    }
 
 Start-Sleep -Seconds 1
 
 if (Test-Path $DellCabExtractPath) { 
     Remove-Item -Path $DellCabExtractPath -Force -Recurse
-}
-
+    }
 
 $NewFolder = New-Item -Path $DellCabExtractPath -ItemType Directory
 
@@ -180,11 +181,10 @@ $Expand = expand $CabPathIndex $DellCabExtractPath\CatalogIndexPC.xml
 Write-Host "Loading Dell Catalog XML..." -ForegroundColor Yellow
 [xml]$XMLIndex = Get-Content "$DellCabExtractPath\CatalogIndexPC.xml"
 
-
 #Dig through the XML to find model of this computer (Based on System SKU)
 $XMLModel = $XMLIndex.ManifestIndex.GroupManifest | Where-Object { $_.SupportedSystems.Brand.Model.systemID -match $SystemSKUNumber }
 if ($XMLModel) {
-    New-CMTraceLog -Message "Downloaded Dell DCU XML, now looking for updates" -Type 1 -LogFile $LogFile
+   New-CMTraceLog -Message "Downloaded Dell DCU XML, now looking for updates" -Type 1 -LogFile $LogFile
     Invoke-WebRequest -Uri "http://downloads.dell.com/$($XMLModel.ManifestInformation.path)" -OutFile $CabPathIndexModel -UseBasicParsing -Proxy $ProxyServer
     if (Test-Path $CabPathIndexModel) {
         $Expand = expand $CabPathIndexModel $DellCabExtractPath\CatalogIndexPCModel.xml
@@ -217,9 +217,8 @@ if ($XMLModel) {
         if ($DCUBIOSVersion -gt $CurrentBIOSVersion) {
             
             if ($Remediate -eq $true) {
-                New-CMTraceLog -Message "New BIOS Update available: Installed = $CurrentBIOSVersion DCU = $DCUBIOSVersion" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message "BIOS Update available: Installed = $CurrentBIOSVersion Available = $DCUBIOSVersion" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "  Title: $($DCUBIOSLatest.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
-                New-CMTraceLog -Message "  ----------------------------" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   Severity: $($DCUBIOSLatest.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   BIOS Release Date: $DCUBIOSReleaseDate" -Type 1 -LogFile $LogFile
@@ -233,24 +232,24 @@ if ($XMLModel) {
                 New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
                 Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
 
-                #Confirm Download
+                # Confirm Download
                 if (Test-Path $TargetFilePathName) {
-                    New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
+                   New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
                     if ((Get-BitLockerVolume -MountPoint $env:SystemDrive).ProtectionStatus -eq "On" ) {
-                        New-CMTraceLog -Message "Bitlocker Status: On - Suspending before Update" -Type 1 -LogFile $LogFile
-                        Suspend-BitLocker -MountPoint $env:SystemDrive -Force
+                       New-CMTraceLog -Message "Bitlocker Status: On - Suspending before Update" -Type 1 -LogFile $LogFile
+                        Suspend-BitLocker -MountPoint $env:SystemDrive
                         Start-Sleep 5
 
                         if ((Get-BitLockerVolume -MountPoint $env:SystemDrive).ProtectionStatus -eq "On" ) {
-                            New-CMTraceLog -Message "Unable to suspend Bitlocker, exiting update process!" -Type 1 -LogFile $LogFile
+                           New-CMTraceLog -Message "Unable to suspend Bitlocker, exiting update process!" -Type 1 -LogFile $LogFile
                             exit 1
                         }
                         else {
-                            New-CMTraceLog -Message "Bitlocker Status: Off" -Type 1 -LogFile $LogFile
+                           New-CMTraceLog -Message "Bitlocker Status: Off" -Type 1 -LogFile $LogFile
                         }
                     }
                     else {
-                        New-CMTraceLog -Message "Bitlocker Status: Off" -Type 1 -LogFile $LogFile
+                       New-CMTraceLog -Message "Bitlocker Status: Off" -Type 1 -LogFile $LogFile
                     }                  
                     $BiosLogFileName = $TargetFilePathName.replace(".exe", ".log")
                     $BiosArguments = "/s /l=$BiosLogFileName"
@@ -271,19 +270,19 @@ if ($XMLModel) {
             }
             else {
                 # Needs Remediation
-                New-CMTraceLog -Message "New BIOS Update available: Installed = $CurrentBIOSVersion DCU = $DCUBIOSVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message "BIOS update available: Installed = $CurrentBIOSVersion Available = $DCUBIOSVersion | Remediation Required" -Type 1 -LogFile $LogFile
                 exit 1
             }
             
         }
         else {
-            #Compliant
-            New-CMTraceLog -Message " BIOS in DCU XML same as BIOS in CM: $CurrentBIOSVersion" -Type 1 -LogFile $LogFile
+            # Compliant
+            New-CMTraceLog -Message " Latest BIOS already installed: $CurrentBIOSVersion" -Type 1 -LogFile $LogFile
             exit 0
         }
     }
     else {
-        #No Cab with XML was able to download
+        # No Cab with XML was able to download
         New-CMTraceLog -Message "No cab file available for this computer model" -Type 2 -LogFile $LogFile
     }
 }

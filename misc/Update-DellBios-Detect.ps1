@@ -16,6 +16,9 @@ I've updated a few things.
 - Updated CMtrace logging to streamline logging and screen output
 - Removed default proxy server info and added a $UseProxy parameter that is $false by default.
 
+Usage: Create a proactive remediation script package and include Update-DellBios-Detect.ps1 as the detection script and 
+  Update-DellBios-Remediate.ps1 as the remediate script. Assign the package to run on only Dell PCs.
+
 #>
 
 [CmdletBinding()]
@@ -214,9 +217,8 @@ if ($XMLModel) {
         if ($DCUBIOSVersion -gt $CurrentBIOSVersion) {
             
             if ($Remediate -eq $true) {
-                New-CMTraceLog -Message "New BIOS Update available: Installed = $CurrentBIOSVersion DCU = $DCUBIOSVersion" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message "BIOS Update available: Installed = $CurrentBIOSVersion Available = $DCUBIOSVersion" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "  Title: $($DCUBIOSLatest.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
-                New-CMTraceLog -Message "  ----------------------------" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   Severity: $($DCUBIOSLatest.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
                 New-CMTraceLog -Message "   BIOS Release Date: $DCUBIOSReleaseDate" -Type 1 -LogFile $LogFile
@@ -230,7 +232,7 @@ if ($XMLModel) {
                 New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
                 Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
 
-                #Confirm Download
+                # Confirm Download
                 if (Test-Path $TargetFilePathName) {
                    New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
                     if ((Get-BitLockerVolume -MountPoint $env:SystemDrive).ProtectionStatus -eq "On" ) {
@@ -268,19 +270,19 @@ if ($XMLModel) {
             }
             else {
                 # Needs Remediation
-                New-CMTraceLog -Message "New BIOS Update available: Installed = $CurrentBIOSVersion DCU = $DCUBIOSVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                New-CMTraceLog -Message "BIOS update available: Installed = $CurrentBIOSVersion Available = $DCUBIOSVersion | Remediation Required" -Type 1 -LogFile $LogFile
                 exit 1
             }
             
         }
         else {
-            #Compliant
-            New-CMTraceLog -Message " BIOS in DCU XML same as BIOS in CM: $CurrentBIOSVersion" -Type 1 -LogFile $LogFile
+            # Compliant
+            New-CMTraceLog -Message " Latest BIOS already installed: $CurrentBIOSVersion" -Type 1 -LogFile $LogFile
             exit 0
         }
     }
     else {
-        #No Cab with XML was able to download
+        # No Cab with XML was able to download
         New-CMTraceLog -Message "No cab file available for this computer model" -Type 2 -LogFile $LogFile
     }
 }

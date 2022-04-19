@@ -11,6 +11,9 @@ Minor adjustments by:   Joel Stidley https://github.com/joelst/
 - fixed issue when release has multiple dates assigned.
 - streamlined logging
 
+Usage: Create a proactive remediation script package and include Update-DellApps-Detect.ps1 as the detection script and 
+  Update-DellApps-Remediate.ps1 as the remediate script. Assign the package to run on only Dell PCs.
+
 #>
 [CmdletBinding()]
 param (
@@ -341,7 +344,7 @@ if ($Manufacturer -match "Dell") {
                     [String]$CurrentVersion = "Not installed" 
                 }
                 if ($Remediate -eq $true) {
-                    New-CMTraceLog -Message "Update available: Installed = $CurrentVersion DCU = $DCUVersion" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update available: Installed = $CurrentVersion Available = $DCUVersion" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
@@ -378,7 +381,7 @@ if ($Manufacturer -match "Dell") {
                 }
                 else {
                     #Needs Remediation
-                    New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
                     $Compliance = $false
                 }
             
@@ -403,7 +406,7 @@ if ($Manufacturer -match "Dell") {
             if ($DCUVersion -gt $CurrentVersion) {
                 if ($CurrentVersion -eq $null) { [String]$CurrentVersion = "Not Installed" }
                 if ($Remediate -eq $true) {
-                    New-CMTraceLog -Message "Update available: Installed = $CurrentVersion DCU = $DCUVersion" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update available: Installed = $CurrentVersion Available = $DCUVersion" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
@@ -434,14 +437,14 @@ if ($Manufacturer -match "Dell") {
                         }
                     }
                     else {
-                        New-CMTraceLog -Message " Update download failed" -Type 3 -LogFile $LogFile
+                        New-CMTraceLog -Message "Update download failed" -Type 3 -LogFile $LogFile
                         $Compliance = $false
                     }
                 }
                 else {
                     #Needs Remediation
                     #$DellItem.Name.Display.'#cdata-section'
-                    New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | DCU = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
                     $Compliance = $false
                 }
             

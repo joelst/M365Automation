@@ -2,25 +2,24 @@
     .DESCRIPTION
     Local Admin Password Rotation and Account Management
     Set configuration values, and follow rollout instructions at https://www.lieben.nu/liebensraum/?p=3605
-    Not tested for use in hybrid scenarios, it might work, but could cause conflicts with e.g. specific password policies.
-  
+      
     .NOTES
-    Copyright/License:     https://www.lieben.nu/liebensraum/commercial-use/ (Commercial (re)use not allowed without prior written consent by the author, otherwise free to use/modify as long as header  kept intact)
+    Copyright/License:     https://www.lieben.nu/liebensraum/commercial-use/ (Commercial (re)use not allowed without prior written consent by the author, otherwise free to use/modify as long as header kept intact)
     filename:               LeanLAPS.ps1
     author:                 Jos Lieben (Lieben Consultancy)
     created:                09/06/2021
     last updated:           see https://gitlab.com/Lieben/assortedFunctions/-/tree/master/leanLAPS
     
     inspired by:            Rudy Ooms; https://call4cloud.nl/2021/05/the-laps-reloaded/
-    Minor adjustments by:   Joel Stidley 2/21/2022 https://github.com/joelst/
-        - Updated password generator to remove commonly confused characters, like i and l and 1 
+    
+    Customization by:   Joel Stidley https://github.com/joelst/
+        - Updated password generator to remove commonly confused characters, like i,l,1,0, and O
         - Added Set-LocalUser try/catch if there are errors using ADSI password set option.
 #>
 [CmdletBinding()]
 param (
-    ####CONFIG
     $minimumPasswordLength = 21,
-    $publicEncryptionKey = "", # If you supply a public encryption key, leanLaps will use this to encrypt the password, ensuring it will only be in encrypted form in Proactive Remediations
+    $publicEncryptionKey = "", # If you supply a public encryption key, LeanLAPS will use this to encrypt the password, ensuring it will only be in encrypted form in Proactive Remediations
     $localAdminName = "LocalAdmin",
     $removeOtherLocalAdmins = $true, # if set to True, will remove ALL other local admins, including those set through AzureAD device settings
     $disableBuiltinAdminAccount = $false, #Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
@@ -268,11 +267,10 @@ if (!$pwdSet) {
         try {
             $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true
         }
-        catch 
-        {
+        catch {
             # If Set-LocalUser fails, set password using ADSI, this should also ensure that Set-LocalUser works next time.
-            $LocalDirectory = [ADSI]::new(('WinNT://{0}'-f$env:COMPUTERNAME))
-            $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword',$NewPwd)
+            $LocalDirectory = [ADSI]::new(('WinNT://{0}' -f $env:COMPUTERNAME))
+            $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword', $NewPwd)
         }
 
         Write-CustomEventLog "Password for $localAdminName set to a new value, see MEM"
