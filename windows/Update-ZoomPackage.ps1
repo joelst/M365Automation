@@ -38,7 +38,7 @@ Param (
     $PackageId = "Zoom.Zoom",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{89A05370-496B-4589-8D16-539314A11C8C}",
+    $ProductCode = "{10F9C1AD-E615-47A6-B3E6-A66308D01F65}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]

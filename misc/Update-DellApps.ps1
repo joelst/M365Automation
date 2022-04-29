@@ -17,7 +17,7 @@ Usage: Create a proactive remediation script package and include Update-DellApps
 #>
 [CmdletBinding()]
 param (
-    $ScriptVersion = "21.6.14.1",
+    $ScriptVersion = "1.2204.21.0",
     $whoami = $env:USERNAME,
     $IntuneFolder = "$env:ProgramData\Intune",
     $LogFilePath = "$IntuneFolder\Logs",
@@ -26,7 +26,6 @@ param (
     $ProxyConnection,
     $ProxyConnectionPort = "8080",
     $Compliance = $true,
-    $Remediate = $true,
     [bool]$UseProxy = $false,
     $ProxyServer,
     $BitsProxyList
@@ -38,6 +37,22 @@ $CabPath = "$env:temp\DellCabDownloads\DellSDPCatalogPC.cab"
 $CabPathIndex = "$env:temp\DellCabDownloads\CatalogIndexPC.cab"
 $CabPathIndexModel = "$env:temp\DellCabDownloads\CatalogIndexModel.cab"
 $DellCabExtractPath = "$env:temp\DellCabDownloads\DellCabExtract"
+$DCUReport = "C:\temp"
+
+$null = New-Item -Path $DCUReport -ItemType Directory -ErrorAction SilentlyContinue
+
+$mode = $MyInvocation.MyCommand.Name.Split(".")[0]
+
+if ($mode -eq "detect") {
+    $Remediate = $false
+    #$detect = $true
+}
+else {
+    
+    $Remediate = $true
+    #$detect = $false
+}
+
 
 if ($Remediate -eq $true)
 { $ComponentText = "DCU Apps - Remediation" }
@@ -207,43 +222,50 @@ function New-CMTraceLog {
     $LogMessage | Out-File -Append -Encoding UTF8 -FilePath $LogFile
 
     if ($Type -eq 1) {
-        Write-Output $Message
+        Write-Output $Message -ErrorAction SilentlyContinue
     }
     elseif ($Type -eq 2) {
-        Write-Warning $Message
+        Write-Output $Message -ErrorAction SilentlyContinue
     }
     elseif ($Type -eq 3) {
-        Write-Error $Message
+        Write-Output $Message -ErrorAction SilentlyContinue
     }
     else {
-        Write-Host $Message
+        Write-Host $Message -ErrorAction SilentlyContinue
     }
     
 }
 Function Restart-ByPassComputer {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [int]
+        # Number of minutes to wait before restarting when a user is logged in.
+        $MaxWaitMinutes = 90
+    )
+    # TODO: Add toast notification
 
-    #Add Logic for Bitlocker
-    #Add Toast Notification
-    #Add Shutdown in 2 hours
+    $WaitSeconds = $MaxWaitMinutes * 60
 
-    #Assuming if Process "Explorer" Exist, that a user is logged on.
+    # Assuming if "Explorer" process exists, that a user is logged on.
     $Session = Get-Process -Name "Explorer" -ErrorAction SilentlyContinue
-    CMTraceLog -Message "User Session: $Session" -Type 1 -LogFile $LogFile
+    New-CMTraceLog -Message "User Session: $Session" -Type 1 -LogFile $LogFile
     Suspend-BitLocker -MountPoint $env:SystemDrive
-    If ($null -ne $Session) {
-        New-CMTraceLog -Message "User Session: $Session, Restarting in 60 minutes" -Type 1 -LogFile $LogFile
-        Start-Process shutdown.exe -ArgumentList '/r /f /t 3600 /c "System must be restarted to apply updates, please save your work now. Otherwise Computer will reboot in 60 minutes"'
+    if ($null -ne $Session) {
+        New-CMTraceLog -Message "User Session: $Session, Restarting in $MaxWaitMinutes minutes" -Type 1 -LogFile $LogFile
+        $WaitMessage = "System must be restarted to apply updates, please save your work now. Otherwise you computer will reboot in $MaxWaitMinutes minutes"
+        Start-Process shutdown.exe -ArgumentList "/r /f /t $WaitSeconds /c $WaitMessage"
  
     }
     else {
-        New-CMTraceLog -Message "No User Session Found, Restarting in 60 seconds" -Type 1 -LogFile $LogFile
-        Start-Process shutdown.exe -ArgumentList '/r /f /t 60 /c "Updating System, computer will restart in 60 seconds"'
+        New-CMTraceLog -Message "No users sessions found. Computer will restart in 60 seconds" -Type 1 -LogFile $LogFile
+        Start-Process shutdown.exe -ArgumentList '/r /f /t 60 /c "System must be restarted to apply updates, please save your work now. Your computer will restart in 60 seconds"'
+    
     }
 
 }  
 
-New-CMTraceLog -Message "---------------------------------" -Type 1 -LogFile $LogFile
-New-CMTraceLog -Message "Starting $ScriptName, $ScriptVersion | Remediation Mode $Remediate" -Type 1 -LogFile $LogFile
+New-CMTraceLog -Message "Starting $ScriptName, $ScriptVersion | Remediation: $Remediate" -Type 1 -LogFile $LogFile
 New-CMTraceLog -Message "Running as $whoami" -Type 1 -LogFile $LogFile
 
 if ($Manufacturer -match "Dell") {
@@ -290,7 +312,9 @@ if ($Manufacturer -match "Dell") {
     if (Test-Path "$DellCabExtractPath\DellSDPCatalogPC.xml") { 
         Remove-Item -Path "$DellCabExtractPath\DellSDPCatalogPC.xml" -Force 
     }
+
     Start-Sleep -Seconds 1
+    
     if (Test-Path $DellCabExtractPath) { 
         Remove-Item -Path $DellCabExtractPath -Force -Recurse 
     }
@@ -306,7 +330,7 @@ if ($Manufacturer -match "Dell") {
     
     if ($XMLModel) {
         New-CMTraceLog -Message "Dell DCU XML downloaded, searching for updates..." -Type 1 -LogFile $LogFile
-        Invoke-WebRequest -Uri "http://downloads.dell.com/$($XMLModel.ManifestInformation.path)" -OutFile $CabPathIndexModel -UseBasicParsing -Proxy $ProxyServer
+        Invoke-WebRequest -Uri "http://downloads.dell.com/$($XMLModel.ManifestInformation.path)" -OutFile $CabPathIndexModel -UseBasicParsing -Proxy $ProxyServer -ErrorAction Continue
         if (Test-Path $CabPathIndexModel) {
             $Expand = expand $CabPathIndexModel $DellCabExtractPath\CatalogIndexPCModel.xml
             [xml]$XMLIndexCAB = Get-Content "$DellCabExtractPath\CatalogIndexPCModel.xml"
@@ -340,12 +364,13 @@ if ($Manufacturer -match "Dell") {
             $TargetFileName = ($DellItem.path).Split("/") | Select-Object -Last 1
             
             if ($DCUVersion -gt $CurrentVersion) {
-                if ($CurrentVersion -eq $null) { 
+                if ($null -eq $CurrentVersion) { 
                     [String]$CurrentVersion = "Not installed" 
                 }
+                
                 if ($Remediate -eq $true) {
                     New-CMTraceLog -Message "Update available: Installed = $CurrentVersion Available = $DCUVersion" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "   Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
@@ -356,120 +381,208 @@ if ($Manufacturer -match "Dell") {
 
                     # Build info to download and Update CM Package
                     $TargetFilePathName = "$($DellCabExtractPath)\$($TargetFileName)"
-                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
-                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
+                    New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer -ErrorAction Continue " -Type 1 -LogFile $LogFile
+                    
+                    try {
+                        Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer -ErrorAction Continue
 
-                    #Confirm Download
-                    if (Test-Path $TargetFilePathName) {
-                        New-CMTraceLog -Message "   Download completed " -Type 1 -LogFile $LogFile
-                        $LogFileName = $TargetFilePathName.replace(".exe", ".log")
-                        $Arguments = "/s /l=$LogFileName"
-                        Write-Output "Starting update"
-                        Write-Output "Log file = $LogFileName"
-                        New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
-                        $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
-                        New-CMTraceLog -Message " Update completed with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
-
-                        If ($Process -ne $null -and $Process.ExitCode -eq '2') {
-                            $RestartComputer = $true
+                        # Confirm download
+                        if (Test-Path $TargetFilePathName) {
+                            New-CMTraceLog -Message "   Download completed " -Type 1 -LogFile $LogFile
+                            $LogFileName = $TargetFilePathName.replace(".exe", ".log")
+                            $Arguments = "/s /l=$LogFileName"
+                            Write-Output "Starting update"
+                            Write-Output "Log file = $LogFileName"
+                            New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
+                            $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
+                            New-CMTraceLog -Message " Update completed with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
+    
+                            if ($null -ne $Process -and $Process.ExitCode -eq '2') {
+                                $RestartComputer = $true
+                            }
+    
+                        }
+                        else {
+                            New-CMTraceLog -Message " Update download failed $(Get-Date)" -Type 3 -LogFile $LogFile
+                            $Compliance = $false
                         }
                     }
-                    else {
-                        New-CMTraceLog -Message " Update download failed" -Type 3 -LogFile $LogFile
-                        $Compliance = $false
+                    catch {
+
+                        # Only need to scan if we are detecting
+                        if ($Remediate -eq $false) {
+
+                            $DcuReport = $DCUReport.TrimEnd("\")
+                            Remove-Item -Path "$($DCUReport)DCUApplicableUpdates.xml" -ErrorAction SilentlyContinue
+
+                            if (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe") {
+                                New-CMTraceLog " Running Start-Process 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/scan -report=$DCUReport'" -Type 1 -LogFile $LogFile
+                                Start-Process "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/scan -report=$DCUReport"
+                            }
+                            elseif (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe") {
+                                New-CMTraceLog " Running Start-Process 'C:\Program Files(x86)\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/scan -report=$DCUReport'" -Type 1 -LogFile $LogFile
+                                Start-Process "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/scan -report=$DCUReport"
+                            }
+                            New-CMTraceLog "Waiting for update xml to be generated." -Type 2 -LogFile $LogFile
+                            Start-Sleep 600
+                            New-CMTraceLog "Loading $($DCUReport)DCUApplicableUpdates.xml..." -Type 1 -LogFile $LogFile
+    
+                            [xml]$XMLUpdates = Get-Content "$($DCUReport)\DCUApplicableUpdates.xml" -ErrorAction Silentlycontinue
+
+                            # If there are one or more updates in the file then we will need to install stuff
+                            if ($XMlUpdates.Count -ge 1) {
+                                $Compliance = $false
+                            }
+
+                        }
+
                     }
                 }
                 else {
-                    #Needs Remediation
-                    New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
+                    # needs Remediation
+                    New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required | $(Get-Date)" -Type 1 -LogFile $LogFile
                     $Compliance = $false
                 }
             
             }
             else {
-                #Compliant
-                New-CMTraceLog -Message " Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion" -Type 1 -LogFile $LogFile
+                # compliant
+                New-CMTraceLog -Message "Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion | $(Get-Date)" -Type 1 -LogFile $LogFile
             }
 
             # Check DCM Now
             $DellItem = $AppDCM
+
+            
             if ("" -ne $InstalledDCM) { 
                 [Version]$CurrentVersion = $InstalledDCM.Version 
             }
             else { $CurrentVersion = $null }
-
+          
+           
             [Version]$DCUVersion = $DellItem.vendorVersion
             $DCUReleaseDate = $(Get-Date $DellItem.releaseDate -Format 'yyyy-MM-dd')               
             $TargetLink = "http://downloads.dell.com/$($DellItem.path)"
             $TargetFileName = ($DellItem.path).Split("/") | Select-Object -Last 1
 
             if ($DCUVersion -gt $CurrentVersion) {
-                if ($CurrentVersion -eq $null) { [String]$CurrentVersion = "Not Installed" }
+                if ($null -eq $CurrentVersion) { [String]$CurrentVersion = "Not Installed" }
                 if ($Remediate -eq $true) {
                     New-CMTraceLog -Message "Update available: Installed = $CurrentVersion Available = $DCUVersion" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "  Title: $($DellItem.Name.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
+                    New-CMTraceLog -Message "   Title: $($DellItem.Name.Display.'#cdata-section') Version: $DCUVersion " -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Severity: $($DellItem.Criticality.Display.'#cdata-section')" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   FileName: $TargetFileName" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Release Date: $DCUReleaseDate" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   KB: $($DellItem.releaseID)" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Link: $TargetLink" -Type 1 -LogFile $LogFile
                     New-CMTraceLog -Message "   Info: $($DellItem.ImportantInfo.URL)" -Type 1 -LogFile $LogFile
-                    New-CMTraceLog -Message "   Version: $DCUVersion " -Type 1 -LogFile $LogFile
 
-                    #Build Required Info to Download and Update CM Package
+                    # Build Required Info to Download and Update CM Package
                     $TargetFilePathName = "$($DellCabExtractPath)\$($TargetFileName)"
                     New-CMTraceLog -Message "   Running Command: Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer " -Type 1 -LogFile $LogFile
-                    Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer
-
-                    #Confirm Download
-                    if (Test-Path $TargetFilePathName) {
-                        New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
-                                     
-                        $LogFileName = $TargetFilePathName.replace(".exe", ".log")
-                        $Arguments = "/s /l=$LogFileName"
-                        Write-Output "Starting update..."
-                        New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
-                        $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
-                        New-CMTraceLog -Message " Update complete with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
                     
-                        If ($Process -ne $null -and $Process.ExitCode -eq '2') {
-                            $RestartComputer = $true
+                    try {
+                        Invoke-WebRequest -Uri $TargetLink -OutFile $TargetFilePathName -UseBasicParsing -Proxy $ProxyServer -ErrorAction Continue
+
+                        # Confirm download
+                        if (Test-Path $TargetFilePathName) {
+                            New-CMTraceLog -Message "   Download Complete " -Type 1 -LogFile $LogFile
+                                         
+                            $LogFileName = $TargetFilePathName.replace(".exe", ".log")
+                            $Arguments = "/s /l=$LogFileName"
+                            Write-Output "Starting update..."
+                            New-CMTraceLog -Message " Running Command: Start-Process $TargetFilePathName $Arguments -Wait -PassThru " -Type 1 -LogFile $LogFile
+                            $Process = Start-Process "$TargetFilePathName" $Arguments -Wait -PassThru
+                            New-CMTraceLog -Message " Update complete with exitcode: $($Process.ExitCode)" -Type 1 -LogFile $LogFile
+                        
+                            If ($null -ne $Process -and $Process.ExitCode -eq '2') {
+                                $RestartComputer = $true
+                            }
+                        }
+                        else {
+                            New-CMTraceLog -Message "Update download failed" -Type 3 -LogFile $LogFile
+                            $Compliance = $false
                         }
                     }
+                    catch {
+                        New-CMTraceLog -Message "No data found device status unknown" -Type 1 -LogFile $LogFile
+                        # Only need to scan if we are detecting
+                        if ($Remediate -eq $false) {
+
+                            $DcuReport = $DCUReport.TrimEnd("\")
+                            Remove-Item -Path "$($DCUReport)DCUApplicableUpdates.xml" -ErrorAction SilentlyContinue
+                        
+                            if (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe") {
+                                New-CMTraceLog " Running Start-Process 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/scan -report=$DCUReport'" -Type 1 -LogFile $LogFile
+                                Start-Process "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/scan -report=$DCUReport"
+                            }
+                            elseif (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe") {
+                                New-CMTraceLog " Running Start-Process 'C:\Program Files(x86)\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/scan -report=$DCUReport'" -Type 1 -LogFile $LogFile
+                                Start-Process "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/scan -report=$DCUReport"
+                            }
+                            New-CMTraceLog "Waiting for update xml to be generated." -Type 2 -LogFile $LogFile
+                            Start-Sleep 600
+                            New-CMTraceLog "Loading $($DCUReport)DCUApplicableUpdates.xml..." -Type 1 -LogFile $LogFile
+                            
+                            [xml]$XMLUpdates = Get-Content "$($DCUReport)\DCUApplicableUpdates.xml" -ErrorAction Silentlycontinue
+                        
+                            # If there are one or more updates in the file then we will need to install stuff
+                            if ($XMlUpdates.Count -ge 1) {
+                                $Compliance = $false
+                            }
+                        
+                        }
+
+                    }
                     else {
-                        New-CMTraceLog -Message "Update download failed" -Type 3 -LogFile $LogFile
+                        # Needs remediation
+                        New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required | $(Get-Date)" -Type 1 -LogFile $LogFile
                         $Compliance = $false
                     }
+            
                 }
                 else {
-                    #Needs Remediation
-                    #$DellItem.Name.Display.'#cdata-section'
-                    New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required" -Type 1 -LogFile $LogFile
-                    $Compliance = $false
+                    # Compliant
+                    New-CMTraceLog -Message " Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion | $(Get-Date)" -Type 1 -LogFile $LogFile
+                    $Compliance = $true
                 }
-            
             }
             else {
-                #Compliant
-                New-CMTraceLog -Message " Update $($DellItem.Name.Display.'#cdata-section') is already installed: $CurrentVersion" -Type 1 -LogFile $LogFile
+                # No Cab with XML was able to download
+                New-CMTraceLog -Message "No cab file downloaded" -Type 2 -LogFile $LogFile
             }
         }
         else {
-            #No Cab with XML was able to download
-            New-CMTraceLog -Message "No cab file downloaded" -Type 2 -LogFile $LogFile
+            # No Match in the DCU XML for this Model (SKUNumber)
+            New-CMTraceLog -Message "No match for $SystemSKUNumber" -Type 2 -LogFile $LogFile
         }
+
+        if ($Remediate) {
+            New-CMTraceLog -Message "Running dcu-cli to find updates" -Type 1 -LogFile $LogFile
+        
+            # Get updates for other stuff
+            if (Test-Path -Path "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe") {
+          
+                New-CMTracelog "Running  Start-Process 'C:\Program Files\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/applyUpdates -updatetype=firmware,driver,apps,bios -updateSeverity=recommended,security,critical -reboot=disable -autoSuspendBitlocker -outputLog=C:\windows\temp\DCU-inst.log'" -Type 1 -LogFile $LogFile
+                Start-Process "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -updatetype=firmware,driver,apps,bios -updateSeverity=recommended,security,critical -reboot=disable -autoSuspendBitlocker -outputLog=C:\windows\temp\DCU-inst.log"
+                $RestartComputer = $true
+            }
+            elseif (Test-Path -Path "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe") {
+                New-CMTracelog "Running  Start-Process 'C:\Program Files(x86)\Dell\CommandUpdate\dcu-cli.exe' -ArgumentList '/applyUpdates -updatetype=firmware,driver,apps,bios -updateSeverity=recommended,security,critical -reboot=disable -autoSuspendBitlocker -outputLog=C:\windows\temp\DCU-inst.log'" -Type 1 -LogFile $LogFile
+                Start-Process "C:\Program Files (x86)\Dell\CommandUpdate\dcu-cli.exe" -ArgumentList "/applyUpdates -updatetype=firmware,driver,apps,bios -updateSeverity=recommended,security,critical -reboot=disable -autoSuspendBitlocker -outputLog=C:\windows\temp\DCU-inst.log"
+                $RestartComputer = $true                    
+            }
+
+            $Compliance = $true
+            exit 0
+        }
+
+        if ($Compliance -eq $false) {
+            New-CMTraceLog -Message "Computer is non-compliant, remediation required | $(Get-Date)" -Type 1 -LogFile $LogFile
+            exit 1
+        }
+        if ($RestartComputer -eq $true) { Restart-ByPassComputer }
     }
     else {
-        #No Match in the DCU XML for this Model (SKUNumber)
-        New-CMTraceLog -Message "No match for $SystemSKUNumber" -Type 2 -LogFile $LogFile
+        New-CMTraceLog -Message "This isn't a Dell computer exiting...`n     This script should only be run on Dell computers." -Type 2 -LogFile $LogFile
     }
-
-    if ($Compliance -eq $false) {
-        New-CMTraceLog -Message "Exit script as non-compliant" -Type 2 -LogFile $LogFile
-        exit 1
-    }
-    if ($RestartComputer -eq $true) { Restart-ByPassComputer }
-}
-else {
-    New-CMTraceLog -Message "This isn't a Dell computer exiting...`n     This script should only be run on Dell computers." -Type 2 -LogFile $LogFile
-}

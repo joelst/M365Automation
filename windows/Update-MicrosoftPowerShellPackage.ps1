@@ -38,7 +38,7 @@ Param (
     $PackageId = "Microsoft.PowerShell",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{11E117C7-01D0-4C4E-9096-2E90843A173E}",
+    $ProductCode = "{C4F0686B-5B68-4E8C-B2D7-89B6ECEDDC61}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]

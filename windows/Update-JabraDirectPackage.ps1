@@ -38,7 +38,7 @@ Param (
     $PackageId = "Jabra.Direct",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{C0697D7D-9F83-46CC-8A0B-2537C12B6FFB}",
+    $ProductCode = "{D3AD7583-239A-48C4-BD17-77EF94EE2AEE}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]

@@ -263,15 +263,11 @@ if (!$pwdSet) {
         $newPwd = Get-NewPassword $minimumPasswordLength
         $newPwdSecStr = ConvertTo-SecureString $newPwd -AsPlainText -Force
         $pwdSet = $true
-       
-        try {
-            $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true
-        }
-        catch {
-            # If Set-LocalUser fails, set password using ADSI, this should also ensure that Set-LocalUser works next time.
-            $LocalDirectory = [ADSI]::new(('WinNT://{0}' -f $env:COMPUTERNAME))
-            $null = $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword', $NewPwd)
-        }
+              
+        $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true -ErrorAction SilentlyContinue
+        # Temporary: If Set-LocalUser fails, set password using ADSI, this should also ensure that Set-LocalUser works next time.
+        $LocalDirectory = [ADSI]::new(('WinNT://{0}' -f $env:COMPUTERNAME))
+        $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword', $NewPwd)
 
         Write-CustomEventLog "Password for $localAdminName set to a new value, see MEM"
     }

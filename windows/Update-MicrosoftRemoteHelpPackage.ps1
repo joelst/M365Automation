@@ -147,7 +147,7 @@ $packageInfo = winget show $PackageId
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable /silent /norestart"
+    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements`""
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
 

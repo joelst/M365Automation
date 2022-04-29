@@ -18,7 +18,7 @@ function Set-RegInfo {
 $ErrorActionPreference = "Continue"
 
 Start-Transcript -Path "$env:TEMP\MEMBLocker-$(Get-Date -f MMddHHmm).txt"
-
+# https://apps.microsoft.com/store/detail/microsoft-store/9WZDNCRFJBMP?hl=en-us&gl=US
 # Check Bitlocker prerequisites
 $TPMNotEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $false } -ErrorAction SilentlyContinue
 $TPMEnabled = Get-CimInstance win32_tpm -Namespace root\cimv2\security\microsofttpm | where { $_.IsEnabled_InitialValue -eq $true } -ErrorAction SilentlyContinue
@@ -39,7 +39,7 @@ if ($WindowsVer -and $TPMEnabled -and !$BitLockerReadyDrive) {
 
 # Step 3 - Check Bitlocker AD Key backup registry values exist and if not, create them.
 $BitLockerRegLoc = "HKLM:\SOFTWARE\Policies\Microsoft"
-if (Test-Path "$BitLockerRegLoc\FVE" -and $TPMNotEnabled) {
+if ((Test-Path "$BitLockerRegLoc\FVE") -and $TPMNotEnabled) {
     Write-Output "Removing $BitLockerRegLoc\FVE key"
     Remove-Item -Path "$BitLockerRegLoc\FVE"
 }
