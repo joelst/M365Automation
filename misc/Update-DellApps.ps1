@@ -583,6 +583,7 @@ if ($Manufacturer -match "Dell") {
         }
         if ($RestartComputer -eq $true) { Restart-ByPassComputer }
     }
-    else {
-        New-CMTraceLog -Message "This isn't a Dell computer exiting...`n     This script should only be run on Dell computers." -Type 2 -LogFile $LogFile
-    }
+}
+else {
+    New-CMTraceLog -Message "This isn't a Dell computer exiting...`n     This script should only be run on Dell computers." -Type 2 -LogFile $LogFile
+}
