@@ -12,7 +12,8 @@ Minor adjustments by:   Joel Stidley https://github.com/joelst/
 - streamlined logging
 
 Usage: Create a proactive remediation script package and include Update-DellApps-Detect.ps1 as the detection script and 
-  Update-DellApps-Remediate.ps1 as the remediate script. Assign the package to run on only Dell PCs.
+
+Update-DellApps.ps1 -Mode Remediate as the remediate script. Assign the package to run on only Dell PCs.
 
 #>
 [CmdletBinding()]
@@ -28,7 +29,8 @@ param (
     $Compliance = $true,
     [bool]$UseProxy = $false,
     $ProxyServer,
-    $BitsProxyList
+    $BitsProxyList,
+    $mode
 )
 
 $SystemSKUNumber = (Get-CimInstance -ClassName Win32_ComputerSystem).SystemSKUNumber
@@ -52,7 +54,6 @@ else {
     $Remediate = $true
     #$detect = $false
 }
-
 
 if ($Remediate -eq $true)
 { $ComponentText = "DCU Apps - Remediation" }

@@ -61,12 +61,12 @@ if ($mode -eq "detect") {
                 foreach ($GCV in $GCVer[4]) {
                     if ($GCV -eq $GCVersion) {
                         #version installed is latest
-                        Write-Output "$($Ver.os) Stable Version: $GCV,  Chrome $GCVersion is stable"
+                        Write-Output "$($Ver.os) Stable Version: $GCV,  Chrome $GCVersion is stable $(Get-Date)"
                         Exit 0
                     }
                     else {
                         #version installed is not latest
-                        Write-Output "$($Ver.os) Stable Version:$GCV, Not safe, trigger alert" 
+                        Write-Output "$($Ver.os) Stable Version:$GCV, Not safe, trigger alert $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -93,8 +93,10 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" ) {
         Get=Process "chrome" | Stop-Process 
         & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
-    
+        & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+
     }
+
     Exit 0
 
 }

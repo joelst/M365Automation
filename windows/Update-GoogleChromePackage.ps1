@@ -153,7 +153,7 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable OMAHA=1 $SupplementalInstallCmd"
+    $InstallCommandLine = "msiexec.exe .\$Executable /QN $SupplementalInstallCmd"
     $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
     #To_Automate region
 

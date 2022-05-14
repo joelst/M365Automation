@@ -2,11 +2,9 @@
 
 New-GoogleChromeUpdate.ps1
 
-Proactive Remediation for Google Chrome.
+Proactive Remediation for Edge.
 
 Adapted from https://github.com/richeaston/Intune-Proactive-Remediation/tree/main/Chrome-Forced-Update
-
-
 
 #>
 
@@ -43,10 +41,15 @@ $mode = $MyInvocation.MyCommand.Name.Split(".")[0]
 if ($mode -eq "detect") {
 
     try { 
-        clear
+        
         #check MSEDGE version installed    
-        #$EdgeVersionInfo = (Get-AppxPackage -Name "Microsoft.MicrosoftEdge.Stable").Version
-        $edgeregistryver = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version
+        $EdgeVersionInfo = (Get-AppxPackage -Name "Microsoft.MicrosoftEdge.Stable" -ErrorAction SilentlyContinue).Version 
+        $edgeregistryver = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version -ErrorAction SilentlyContinue
+        If ("" -eq $edgeregistryver)
+        {
+            # If we aren't running as a local user lets take the latest package version.
+            $edgeregistryver = $EdgeVersionInfo
+        }
         Write-Output "Installed MSEDGE Version: $edgeregistryver" 
 
         #Get latest version of MSEDGE
@@ -59,12 +62,12 @@ if ($mode -eq "detect") {
                 foreach ($v in $(($ver.Releases).ProductVersion[0])) {
                     if ($v -match $edgeregistryver ) {
                         #version installed is latest
-                        Write-Output "Stable Version: $v,  MSEDGE Version $edgeregistryver is the latest stable release"
+                        Write-Output "Latest: $v == Edge: $edgeregistryver is the latest stable release $(Get-Date)"
                         Exit 0
                     }
                     else {
                         #version installed is not latest
-                        Write-Output "Stable Version:$v, Installed Version $edgeregistryver, Not safe, trigger alert" 
+                        Write-Output "Latest :$v > $edgeregistryver, trigger alert $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -74,7 +77,7 @@ if ($mode -eq "detect") {
     catch {
         $errMsg = $_.Exception.Message
         if ($errmsg -eq "Cannot bind argument to parameter 'Path' because it is null.") {
-            Write-Output "MSEDGE does not appear to be installed"
+            Write-Output "Edge does not appear to be installed $(Get-Date)"
             Exit 0
         }
         else {
@@ -85,14 +88,14 @@ if ($mode -eq "detect") {
 }
 else {
  
-    Write-Output " Running Google Chrome Update $(Get-Date)"
+    Write-Output " Running Edge update $(Get-Date)"
 
     if (Test-Path -Path "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" ) {
 
-        Get-Process -Name "msedge" | Stop-Process
+        Get-Process -Name "msedge" -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
 
         & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
-    
+        & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
     }
     Exit 0
 
