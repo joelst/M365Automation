@@ -1,3 +1,7 @@
+<#
+    This was created when there was a change to the Bitlocker policy that caused a conflict. This was assigned to the problematic machines to have it reapply the new policy.
+
+#>
 function Set-RegInfo {
     [CmdletBinding()]
     param (

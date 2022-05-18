@@ -1,5 +1,5 @@
 <#
-New-DesktopShortcutCleanup.ps1
+New-ProactiveDesktopShortcutCleanup.ps1
 
 Proactive remediation for cleaning up duplicate Edge and Teams shortcuts on the desktop
 

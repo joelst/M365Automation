@@ -1,14 +1,16 @@
 <#
 
-New-GoogleChromeUpdate.ps1
+New-ProactiveGoogleChromeUpdate.ps1
 
 Proactive Remediation for Google Chrome.
 
 Adapted from https://github.com/richeaston/Intune-Proactive-Remediation/tree/main/Chrome-Forced-Update
 
-
+This script should be run as the user if Chrome is installed per user.
 
 #>
+
+$ProcessName = "chrome"
 
 function Show-Window {
     param(
@@ -60,13 +62,13 @@ if ($mode -eq "detect") {
                 $GCVer = $ver.versions.Current_Version
                 foreach ($GCV in $GCVer[4]) {
                     if ($GCV -eq $GCVersion) {
-                        #version installed is latest
-                        Write-Output "$($Ver.os) Stable Version: $GCV,  Chrome $GCVersion is stable $(Get-Date)"
+                        # Installed version is latest
+                        Write-Output "Latest: $($Ver.os) == Installed: $GCVersion, no update required $(Get-Date)"
                         Exit 0
                     }
                     else {
-                        #version installed is not latest
-                        Write-Output "$($Ver.os) Stable Version:$GCV, Not safe, trigger alert $(Get-Date)" 
+                        # Installed version is not latest
+                        Write-Output "Latest: $($Ver.os) > Installed: $GCV, remediation required $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -76,7 +78,7 @@ if ($mode -eq "detect") {
     catch {
         $errMsg = $_.Exception.Message
         if ($errmsg -eq "Cannot bind argument to parameter 'Path' because it is null.") {
-            Write-Output "Google Chrome does not appear to be installed | $(Get-Date)"
+            Write-Output "Google Chrome version not found - $(Get-Date)"
             Exit 0
         }
         else {
@@ -91,10 +93,17 @@ else {
     Write-Output " Running Google Chrome Update $(Get-Date)"
 
     if (Test-Path -Path "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" ) {
-        Get=Process "chrome" | Stop-Process 
-        & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
-        & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
-
+        
+        if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+            Start-Process $ProcessName
+        }
+        else {
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+        }
     }
 
     Exit 0

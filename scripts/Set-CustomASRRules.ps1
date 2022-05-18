@@ -19,15 +19,27 @@ Reference: https://docs.microsoft.com/en-us/microsoft-365/security/defender-endp
 param (
     # string array of all rule Ids to apply
     [Parameter()]
-    [array]$RuleIds= @("e6db77e5-3df2-4cf1-b95a-636979351e5b","d1e49aac-8f56-4280-b9ba-993a6d77406c","01443614-cd74-433a-b99e-2ecdc07bfc25","56a863a9-875e-4185-98a7-b882c64b5ce5","c1db55ab-c21a-4637-bb3f-a12568109d3"),
+    [array]$RuleIds = @("e6db77e5-3df2-4cf1-b95a-636979351e5b", "d1e49aac-8f56-4280-b9ba-993a6d77406c", "01443614-cd74-433a-b99e-2ecdc07bfc25", "56a863a9-875e-4185-98a7-b882c64b5ce5", "c1db55ab-c21a-4637-bb3f-a12568109d3"),
     # Type of action. Can be Enabled, AuditMode, Warn, Disabled
     [Parameter()]
     [string]
-    [ValidateSet("Enabled","Disabled","AuditMode","Warn")]
-    $ActionType="Enabled"
+    [ValidateSet("Enabled", "Disabled", "AuditMode", "Warn")]
+    $ActionType = "Enabled",
+    # Switch to force overwriting existing rules with the rules provided in RuleIds
+    [Parameter()]
+    [switch]$Overwrite
 )
 [string]$rules = ""
 [string]$actions = ""
+
+if ($Overwrite.IsPresent -eq $false) {
+    # Get the existing rules, so we don't overwrite any
+    $existingRuleIds = (Get-MpPreference).AttackSurfaceReductionRules_Ids
+    $RuleIds = + $existingRuleIds
+
+}
+
+$RuleIds = $RuleIds | Sort-Object -Unique 
 
 Foreach ($ruleId in $RuleIds) {
     $rules += ",$ruleId"

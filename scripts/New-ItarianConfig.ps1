@@ -1,3 +1,9 @@
+#
+# Despite many hours of trying to work through this process. It never worked reliably when running as SYSTEM
+#   I decided to use a different tool since I couldn't automate deployment using a cloud-based tool.
+#   There is probably a simple answer, but I don't need it anymore.
+#
+
 $script1 = 
 @"
 function Set-RegInfo {

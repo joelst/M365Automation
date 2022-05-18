@@ -1,6 +1,7 @@
 # Script to find out if a machine is Device Guard compliant.
 # The script requires a driver verifier present on the system.
 
+
 param([switch]$Capable, [switch]$Ready, [switch]$Enable, [switch]$Disable, $SIPolicyPath, [switch]$AutoReboot, [switch]$DG, [switch]$CG, [switch]$HVCI, [switch]$HLK, [switch]$Clear, [switch]$ResetVerifier)
 
 $path = "C:\DGLogs\"

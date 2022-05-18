@@ -1,3 +1,7 @@
+#
+#  This will install Dell Command | Configure using winget and then set the auto on settings.
+#
+
 try
 {
     Set-Location "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe"

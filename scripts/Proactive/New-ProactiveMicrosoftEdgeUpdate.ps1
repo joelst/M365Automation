@@ -1,12 +1,16 @@
 <#
 
-New-GoogleChromeUpdate.ps1
+New-ProactiveMicrosoftEdgeUpdate.ps1
 
 Proactive Remediation for Edge.
 
 Adapted from https://github.com/richeaston/Intune-Proactive-Remediation/tree/main/Chrome-Forced-Update
 
+This script should be run as the user if Edge is installed per user.
+
 #>
+
+$ProcessName = "msedge"
 
 function Show-Window {
     param(
@@ -42,15 +46,14 @@ if ($mode -eq "detect") {
 
     try { 
         
-        #check MSEDGE version installed    
+        #check MS EDGE version installed    
         $EdgeVersionInfo = (Get-AppxPackage -Name "Microsoft.MicrosoftEdge.Stable" -ErrorAction SilentlyContinue).Version 
-        $edgeregistryver = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version -ErrorAction SilentlyContinue
-        If ("" -eq $edgeregistryver)
-        {
-            # If we aren't running as a local user lets take the latest package version.
-            $edgeregistryver = $EdgeVersionInfo
+        $edgeRegistryVer = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version -ErrorAction SilentlyContinue
+        If ("" -eq $edgeRegistryVer) {
+            # If we aren't running as an admin lets take the latest package version.
+            $edgeRegistryVer = $EdgeVersionInfo
         }
-        Write-Output "Installed MSEDGE Version: $edgeregistryver" 
+        Write-Output "Installed Edge version: $edgeRegistryVer" 
 
         #Get latest version of MSEDGE
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -60,14 +63,14 @@ if ($mode -eq "detect") {
             #$channel = $ver.Product 
             if ($ver.Product -eq 'Stable' ) {
                 foreach ($v in $(($ver.Releases).ProductVersion[0])) {
-                    if ($v -match $edgeregistryver ) {
+                    if ($v -match $edgeRegistryVer ) {
                         #version installed is latest
-                        Write-Output "Latest: $v == Edge: $edgeregistryver is the latest stable release $(Get-Date)"
+                        Write-Output "Latest: $v == Installed: $edgeRegistryVer, no update required. $(Get-Date)"
                         Exit 0
                     }
                     else {
                         #version installed is not latest
-                        Write-Output "Latest :$v > $edgeregistryver, trigger alert $(Get-Date)" 
+                        Write-Output "Latest: $v > Installed: $edgeRegistryVer, remediation required $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -77,7 +80,7 @@ if ($mode -eq "detect") {
     catch {
         $errMsg = $_.Exception.Message
         if ($errmsg -eq "Cannot bind argument to parameter 'Path' because it is null.") {
-            Write-Output "Edge does not appear to be installed $(Get-Date)"
+            Write-Output "Edge version not found - $(Get-Date)"
             Exit 0
         }
         else {
@@ -92,10 +95,18 @@ else {
 
     if (Test-Path -Path "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" ) {
 
-        Get-Process -Name "msedge" -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+        if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
+       
+            Start-Process $ProcessName
 
-        & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
-        & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
+        }
+        else {
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
+        }
     }
     Exit 0
 

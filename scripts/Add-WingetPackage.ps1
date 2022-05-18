@@ -1,3 +1,5 @@
+# Make sure the latest version of winget is installed.
+#
 Write-Host "$(Get-Date) Testing for winget "
 while (!(Get-Command -Name winget -ErrorAction SilentlyContinue)) {
   
