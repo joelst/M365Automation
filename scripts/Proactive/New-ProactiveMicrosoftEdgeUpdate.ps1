@@ -105,22 +105,22 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" ) {
 
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
-            Write-Output " Edge running, updating and restarting"
-            Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineCore -AsJob
-            Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineUA -AsJob
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
-            Start-Sleep 15
+            Write-Output " $ProcessName     running, updating and restarting"
             Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-            Start-Sleep 5
-            Start-Process $ProcessName
 
         }
         else {
-            Write-Output " Edge not running, updating"
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            Write-Output " $ProcessName not running, updating"
+
         }
+
+        Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineCore -AsJob
+        Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineUA -AsJob
+        & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
+        & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+        Start-Sleep 15
+        # Have to start the browser to complete the install otherwise it will still show as being the old version.
+        Start-Process $ProcessName
     }
     Exit 0
 

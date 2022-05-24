@@ -77,7 +77,7 @@ if ($mode -eq "detect") {
                     }
                     else {
                         # Installed version is not latest
-                        Write-Output "Latest: $GCV > Installed: $GCV, remediation required $(Get-Date)" 
+                        Write-Output "Latest: $GCV > Installed: $GCVersion, remediation required $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -104,18 +104,18 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" ) {
         
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
-            Write-Output " Chrome running, closing to update"
+            Write-Output " $ProcessName running, closing to update"
             Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
-            Start-Sleep 30
-            Start-Process $ProcessName
         }
         else {
-            Write-Output " Chrome not running, updating"
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+            Write-Output " $ProcessName not running, updating"
         }
+
+        & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+        & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+        # Have to start the browser to complete the install
+        Start-Sleep 30        
+       Start-Process $ProcessName
     }
 
     Exit 0
