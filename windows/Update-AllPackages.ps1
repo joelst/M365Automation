@@ -37,22 +37,19 @@ Param (
 
 )
 
-
+$global:createdPackage = @()
 ## FIND ALL Update-*.ps1 files in $ScriptPath, using -filter and -include was not working so using this sloppy Get-ChildItem
-$Scripts = (Get-ChildItem -path $ScriptPath -Exclude "Update-AllPackages.ps1", "*.json", "New-*.ps1").FullName
+$Scripts = (Get-ChildItem -Path $ScriptPath -Exclude "Update-AllPackages.ps1", "*.json", "New-*.ps1").FullName
 
 Write-Output "`n Found $($scripts.Count) scripts to run"
 Write-Verbose "The following scripts will be executed"
 
-foreach ($script in $scripts)
-{
+foreach ($script in $scripts) {
     Write-Verbose "  $script"
 }
 
-foreach ($script in $scripts)
-{
-    if ($script -notcontains "Update-AllPackages.ps1")
-    {
+foreach ($script in $scripts) {
+    if ($script -notcontains "Update-AllPackages.ps1") {
         Write-Output "`n Running: $script `n"
 
         # using this method because need to specify a switch so -ArgumentList is not straightforward
@@ -63,4 +60,13 @@ foreach ($script in $scripts)
         Invoke-Command -ScriptBlock $sb
     }
     
+}
+
+if ($null -ne $global:createdPackage) {
+    Write-Host "Created..."
+    $global:createdPackage
+
+}
+else {
+    Write-Host "No packages created..."
 }

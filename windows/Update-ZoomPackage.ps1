@@ -38,7 +38,7 @@ Param (
     $PackageId = "Zoom.Zoom",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{10F9C1AD-E615-47A6-B3E6-A66308D01F65}",
+    $ProductCode = "{D1CB49A7-0FE0-4759-BEA5-738259944108}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
@@ -161,14 +161,17 @@ $packageInfo = winget show $PackageId
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
+            $global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
             Write-Host "        Package already exists, Force parameter detected!`n"
+            $global:createdPackage += "$PackageName $PackageVersion created"
         }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"
+        $global:createdPackage += "$PackageName $PackageVersion created"
     }
 
     # Download installer with winget
@@ -380,5 +383,5 @@ $packageInfo = winget show $PackageId
         #endregion
     }
     Else {
-        Write-Error -Message "Failed to retrieve $Package update package via Evergreen."
+        Write-Error -Message "Failed to retrieve $Package update package."
     }

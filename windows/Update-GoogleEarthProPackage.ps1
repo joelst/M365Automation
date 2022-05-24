@@ -165,14 +165,17 @@ else {
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
+            $global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
             Write-Host "        Package already exists, Force parameter detected!`n"
+            $global:createdPackage += "$PackageName $PackageVersion created"
         }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"
+        $global:createdPackage += "$PackageName $PackageVersion created"
     }
 
     # Download installer with winget
@@ -385,5 +388,5 @@ else {
         #endregion
     }
     Else {
-        Write-Error -Message "Failed to retrieve $Package update package via Evergreen."
+        Write-Error -Message "Failed to retrieve $Package update package."
     }

@@ -40,19 +40,28 @@ function Show-Window {
   
 }
 
+function Get-EdgeVersion {
+        #check MS EDGE version installed    
+        $EdgeVersionInfo = (Get-AppxPackage -Name "Microsoft.MicrosoftEdge.Stable" -ErrorAction SilentlyContinue).Version 
+        $edgeVer = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version -ErrorAction SilentlyContinue
+        
+        if ("" -eq $edgeVer) {
+            # If we aren't running as an admin lets take the latest package version.
+            $edgeVer = $EdgeVersionInfo
+        }
+        return $edgeVer
+    
+}
+
+
 $mode = $MyInvocation.MyCommand.Name.Split(".")[0]
 
 if ($mode -eq "detect") {
 
     try { 
         
-        #check MS EDGE version installed    
-        $EdgeVersionInfo = (Get-AppxPackage -Name "Microsoft.MicrosoftEdge.Stable" -ErrorAction SilentlyContinue).Version 
-        $edgeRegistryVer = Get-ItemPropertyValue -Path 'HKCU:\\SOFTWARE\Microsoft\Edge\BLBeacon' -Name version -ErrorAction SilentlyContinue
-        If ("" -eq $edgeRegistryVer) {
-            # If we aren't running as an admin lets take the latest package version.
-            $edgeRegistryVer = $EdgeVersionInfo
-        }
+        $edgeRegistryVer = Get-EdgeVersion
+
         Write-Output "Installed Edge version: $edgeRegistryVer" 
 
         #Get latest version of MSEDGE
@@ -96,16 +105,21 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" ) {
 
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
-            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            Write-Output " Edge running, updating and restarting"
+            Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineCore -AsJob
+            Start-ScheduledTask MicrosoftEdgeUpdateTaskMachineUA -AsJob
             & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
-       
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            Start-Sleep 15
+            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+            Start-Sleep 5
             Start-Process $ProcessName
 
         }
         else {
-            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
+            Write-Output " Edge not running, updating"
             & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /c
+            & "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" /ua /installsource scheduler
         }
     }
     Exit 0

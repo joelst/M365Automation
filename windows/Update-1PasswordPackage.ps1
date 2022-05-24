@@ -156,17 +156,21 @@ $UninstallCommandLine = ".\$Executable --uninstall --silent"
 Write-Host "    Checking to see if $PackageName $PackageVersion has already been created in MEM..."
 $existingPackages = Get-IntuneWin32App -DisplayName $PackageName | Where-Object { $_.DisplayVersion -eq $PackageVersion } | Select-Object -First 1
 
-if (-not $existingPackages -eq '') {
+if (-not $existingPackages -eq '')
+{
     if ($Force.IsPresent -eq $false) {
         Write-Host "        Package already exists, exiting process!`n"
+        $global:createdPackage += "$PackageName $PackageVersion existing"
         exit
     }
-    else {
+    else{
         Write-Host "        Package already exists, Force parameter detected!`n"
+        $global:createdPackage += "$PackageName $PackageVersion created`n"
     }
 }
 else {
     Write-Host "        Package does not exist, creating package now!`n"
+    $global:createdPackage += "$PackageName $PackageVersion created`n"
 }
 
 # Download installer with winget
@@ -382,5 +386,5 @@ If ($PackageName) {
     #endregion
 }
 Else {
-    Write-Error -Message "Failed to retrieve $Package update package via Evergreen."
+    Write-Error -Message "Failed to retrieve $Package update package."
 }

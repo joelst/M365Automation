@@ -38,14 +38,14 @@ Param (
     $PackageId = "Jabra.Direct",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{D3AD7583-239A-48C4-BD17-77EF94EE2AEE}",
+    $ProductCode = "{1DB9C12B-39B0-486E-9A7C-02A3FB1C7846}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
     $InstallExperience = "System",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles(x86)}\Jabra\Direct4\",
+    $AppPath = "${env:ProgramFiles(x86)}\Jabra\Direct6\",
     
     [Parameter(Mandatory = $False)]
     $AppExecutable = "jabra-direct.exe",
@@ -160,14 +160,17 @@ $packageInfo = winget show $PackageId
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
+            $global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
             Write-Host "        Package already exists, Force parameter detected!`n"
+            $global:createdPackage += "$PackageName $PackageVersion created"
         }
     }
     else {
         Write-Host "        Package does not exist, creating package now!`n"
+        $global:createdPackage += "$PackageName $PackageVersion created"
     }
 
     # Download installer with winget
@@ -379,5 +382,5 @@ $packageInfo = winget show $PackageId
         #endregion
     }
     Else {
-        Write-Error -Message "Failed to retrieve $Package update package via Evergreen."
+        Write-Error -Message "Failed to retrieve $Package update package."
     }

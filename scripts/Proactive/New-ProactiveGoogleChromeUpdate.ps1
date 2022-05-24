@@ -6,7 +6,7 @@ Proactive Remediation for Google Chrome.
 
 Adapted from https://github.com/richeaston/Intune-Proactive-Remediation/tree/main/Chrome-Forced-Update
 
-This script should be run as the user if Chrome is installed per user.
+This script should be run as user if Chrome is installed per user.
 
 #>
 
@@ -40,6 +40,14 @@ function Show-Window {
   
 }
 
+function Get-ChromeVersion {
+
+    $Version = Get-ItemPropertyValue -Path 'HKCU:\Software\Google\Chrome\BLBeacon' -Name version -ErrorAction SilentlyContinue
+        
+    return $Version
+}
+
+
 $mode = $MyInvocation.MyCommand.Name.Split(".")[0]
 
 if ($mode -eq "detect") {
@@ -49,8 +57,9 @@ if ($mode -eq "detect") {
         #check Chrome version installed    
         #$GCVersionInfo = (Get-Item (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe' -ErrorAction Ignore).'(Default)').VersionInfo
         #$GCVersion = $GCVersionInfo.ProductVersion
-        $GCVersion = Get-ItemPropertyValue -Path 'HKCU:\Software\Google\Chrome\BLBeacon' -Name version
+        #$GCVersion = Get-ItemPropertyValue -Path 'HKCU:\Software\Google\Chrome\BLBeacon' -Name version -ErrorAction SilentlyContinue
         
+        $GCVersion = Get-ChromeVersion
         Write-Output "Installed Chrome Version: $GCVersion" 
 
         #Get latest version of Chrome
@@ -63,12 +72,12 @@ if ($mode -eq "detect") {
                 foreach ($GCV in $GCVer[4]) {
                     if ($GCV -eq $GCVersion) {
                         # Installed version is latest
-                        Write-Output "Latest: $($Ver.os) == Installed: $GCVersion, no update required $(Get-Date)"
+                        Write-Output "Latest: $GCV == Installed: $GCVersion, no update required $(Get-Date)"
                         Exit 0
                     }
                     else {
                         # Installed version is not latest
-                        Write-Output "Latest: $($Ver.os) > Installed: $GCV, remediation required $(Get-Date)" 
+                        Write-Output "Latest: $GCV > Installed: $GCV, remediation required $(Get-Date)" 
                         Exit 1
                     }
                 }
@@ -95,14 +104,17 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" ) {
         
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
+            Write-Output " Chrome running, closing to update"
             Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
             & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+            Start-Sleep 30
             Start-Process $ProcessName
         }
         else {
-            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
+            Write-Output " Chrome not running, updating"
             & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /c
+            & "C:\Program Files (x86)\Google\Update\GoogleUpdate.exe" /ua /installsource scheduler
         }
     }
 
