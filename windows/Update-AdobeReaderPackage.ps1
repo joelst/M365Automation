@@ -169,7 +169,7 @@ else {
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
-            $global:createdPackage += "$PackageName $PackageVersion existing"
+            #$global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
@@ -325,7 +325,7 @@ else {
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = "21H1"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
@@ -351,7 +351,7 @@ else {
                     Icon                     = $Icon
                     Verbose                  = $true
                 }
-                $null = Add-IntuneWin32App @params
+                $App = Add-IntuneWin32App @params
             }
             catch [System.Exception] {
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
@@ -359,13 +359,13 @@ else {
             }
 
             # Create an available assignment for all users
-            <#
+
             If ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
                         Intent                       = "available"
-                        Notification                 = "showAll"
+                        Notification                 = "hideAll"
                         DeliveryOptimizationPriority = "foreground"
                         #AvailableTime                = ""
                         #DeadlineTime                 = ""
@@ -383,7 +383,7 @@ else {
                     Break
                 }
             }
-            #>
+
         }
         Else {
             Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."

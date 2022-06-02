@@ -58,7 +58,7 @@ Param (
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [Parameter(Mandatory = $False)]
-    $MinimumSupportedOperatingSystem = "1903",
+    $MinimumSupportedOperatingSystem = "21H1",
 
     [switch]$Force
     
@@ -160,7 +160,7 @@ if (-not $existingPackages -eq '')
 {
     if ($Force.IsPresent -eq $false) {
         Write-Host "        Package already exists, exiting process!`n"
-        $global:createdPackage += "$PackageName $PackageVersion existing"
+        #$global:createdPackage += "$PackageName $PackageVersion existing"
         exit
     }
     else{
@@ -360,7 +360,7 @@ If ($PackageName) {
                     $params = @{
                         Id                           = $App.Id
                         Intent                       = "available"
-                        Notification                 = "showAll"
+                        Notification                 = "hideAll"
                         DeliveryOptimizationPriority = "foreground"
                         #AvailableTime                = ""
                         #DeadlineTime                 = ""

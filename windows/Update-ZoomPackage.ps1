@@ -38,7 +38,7 @@ Param (
     $PackageId = "Zoom.Zoom",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{D1CB49A7-0FE0-4759-BEA5-738259944108}",
+    $ProductCode = "{A4A5CE68-D8C4-4613-85A7-24B41D2966BF}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
@@ -161,7 +161,7 @@ $packageInfo = winget show $PackageId
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
-            $global:createdPackage += "$PackageName $PackageVersion existing"
+            #$global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
@@ -275,7 +275,7 @@ $packageInfo = winget show $PackageId
         }
 
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $PackageVersion) {
+        if ($ProductCode -and $PackageVersion) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = "greaterThanOrEqual"
@@ -283,13 +283,13 @@ $packageInfo = winget show $PackageId
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
         }
-        Else {
+        else {
             Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
             Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
             Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
             Break
         }
-        If ($AppPath -and $AppExecutable) {
+        if ($AppPath -and $AppExecutable) {
             $params = @{
                 Version              = $True
                 Path                 = $AppPath
@@ -317,13 +317,13 @@ $packageInfo = winget show $PackageId
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = "21H1"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
         # Add new EXE Win32 app
         # Requires a connection via Connect-MSIntuneGraph first
-        If ($PSBoundParameters.Keys.Contains("Upload")) {
+        if ($PSBoundParameters.Keys.Contains("Upload")) {
             try {
                 $params = @{
                     FilePath                 = $IntuneWinFile.FullName
@@ -343,7 +343,7 @@ $packageInfo = winget show $PackageId
                     Icon                     = $Icon
                     Verbose                  = $true
                 }
-                $null = Add-IntuneWin32App @params
+                $App = Add-IntuneWin32App @params
             }
             catch [System.Exception] {
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
@@ -351,13 +351,13 @@ $packageInfo = winget show $PackageId
             }
 
             # Create an available assignment for all users
-            <#
-            If ($Null -ne $App) {
+            
+            if ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
                         Intent                       = "available"
-                        Notification                 = "showAll"
+                        Notification                 = "none"
                         DeliveryOptimizationPriority = "foreground"
                         #AvailableTime                = ""
                         #DeadlineTime                 = ""
@@ -375,13 +375,13 @@ $packageInfo = winget show $PackageId
                     Break
                 }
             }
-            #>
+            
         }
-        Else {
+        else {
             Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
         }
         #endregion
     }
-    Else {
+    else {
         Write-Error -Message "Failed to retrieve $Package update package."
     }

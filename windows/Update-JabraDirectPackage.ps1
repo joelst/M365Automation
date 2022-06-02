@@ -38,7 +38,7 @@ Param (
     $PackageId = "Jabra.Direct",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{1DB9C12B-39B0-486E-9A7C-02A3FB1C7846}",
+    $ProductCode = "{8B8D86D3-E7C7-4B16-8CDE-76D857D68CA6}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
@@ -160,7 +160,7 @@ $packageInfo = winget show $PackageId
     {
         if ($Force.IsPresent -eq $false) {
             Write-Host "        Package already exists, exiting process!`n"
-            $global:createdPackage += "$PackageName $PackageVersion existing"
+            #$global:createdPackage += "$PackageName $PackageVersion existing"
             exit
         }
         else{
@@ -255,7 +255,7 @@ $packageInfo = winget show $PackageId
         #endregion
 
 
-        #region Upload intunewin file and create the Intune app
+        #region upload intunewin file and create the Intune app
         # Convert image file to icon
         $ImageFile = (Join-Path -Path $Path -ChildPath (Split-Path -Path $IconSource -Leaf))
         try {
@@ -316,7 +316,7 @@ $packageInfo = winget show $PackageId
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = "21H1"
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
@@ -342,7 +342,7 @@ $packageInfo = winget show $PackageId
                     Icon                     = $Icon
                     Verbose                  = $true
                 }
-                $null = Add-IntuneWin32App @params
+                $app = Add-IntuneWin32App @params
             }
             catch [System.Exception] {
                 Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
@@ -350,13 +350,13 @@ $packageInfo = winget show $PackageId
             }
 
             # Create an available assignment for all users
-            <#
+
             If ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
                         Intent                       = "available"
-                        Notification                 = "showAll"
+                        Notification                 = "hideAll"
                         DeliveryOptimizationPriority = "foreground"
                         #AvailableTime                = ""
                         #DeadlineTime                 = ""
@@ -374,7 +374,7 @@ $packageInfo = winget show $PackageId
                     Break
                 }
             }
-            #>
+
         }
         Else {
             Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
