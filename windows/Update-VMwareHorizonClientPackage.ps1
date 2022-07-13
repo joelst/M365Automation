@@ -359,7 +359,7 @@ else {
 
             # Create an available assignment for all users
 
-            If ($Null -ne $App) {
+            if ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
@@ -384,11 +384,11 @@ else {
             }
 
         }
-        Else {
-            Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
+        else {
+            Write-Warning -Message "Upload parameter not specified. Skipping upload to MEM."
         }
         #endregion
     }
-    Else {
+    else {
         Write-Error -Message "Failed to retrieve $Package update package."
     }

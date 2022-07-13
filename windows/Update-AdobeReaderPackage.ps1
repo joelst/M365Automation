@@ -37,7 +37,7 @@ Param (
     $PackageId = "Adobe.Acrobat.Reader.64-bit",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{E3EBB36F-B92A-40EC-824A-7287D483EEAC}",
+    $ProductCode = "{AC76BA86-1033-FF00-7760-BC15014EA700}",
     
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
@@ -157,7 +157,7 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = ".\$Executable AcroRdrDCx642100720099_en_US.exe -sfx_nu /sALL /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1"
+    $InstallCommandLine = ".\$Executable -sfx_nu /sALL /msi EULA_ACCEPT=YES ENABLE_CHROMEEXT=0 DISABLE_BROWSER_INTEGRATION=1 ENABLE_OPTIMIZATION=YES ADD_THUMBNAILPREVIEW=0 DISABLEDESKTOPSHORTCUT=1"
     $UninstallCommandLine = "msiexec.exe /X $ProductCode /QN-"
     #To_Automate region
 
@@ -262,7 +262,6 @@ else {
         }
         Write-Host -ForegroundColor "Cyan" "Found package: $($IntuneWinFile.FullName)."
         #endregion
-
 
         #region Upload intunewin file and create the Intune app
         # Convert image file to icon
@@ -385,7 +384,7 @@ else {
             }
 
         }
-        Else {
+        else {
             Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
         }
         #endregion

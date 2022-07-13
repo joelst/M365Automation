@@ -118,7 +118,7 @@ Function Restart-ByPassComputer {
     New-CMTraceLog -Message "User Session: $Session" -Type 1 -LogFile $LogFile
     Suspend-BitLocker -MountPoint $env:SystemDrive
 
-    if ($Session -ne $null) {
+    if ($null -ne $Session) {
         New-CMTraceLog -Message "User Session: $Session, Restarting in 90 minutes" -Type 1 -LogFile $LogFile
         Start-Process shutdown.exe -ArgumentList '/r /f /t 5400 /c "Your computer needs a BIOS update. Please save your work and restart otherwise your computer will restart in 60 minutes!"'
     }

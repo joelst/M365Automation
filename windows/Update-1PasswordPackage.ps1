@@ -72,13 +72,13 @@ $Path = Join-Path $Path $PackageId
 
 #region Check if token has expired and if, request a new
 Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token for tenant: $TenantName."
-If ($Null -ne $Global:AccessToken) {
+if ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
     [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
     $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
     Write-Warning -Message "Current authentication token expires in (minutes): $TokenExpireMins"
 
-    If ($TokenExpireMins -le 1) {
+    if ($TokenExpireMins -le 1) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
         
         $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
@@ -174,21 +174,21 @@ else {
 }
 
 # Download installer with winget
-If ($PackageName) {
+if ($PackageName) {
  
     # Test to make sure the paths we need are available.
-    If ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true) {
+    if ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true) {
         $null = New-Item -Path $path -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
     }
 
-    If ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true) {
+    if ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true) {
         $null = New-Item -Path $PackageOutputPath -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
     }
 
     # Create the package folder
     $PackagePath = Join-Path -Path $Path -ChildPath "Package"
     Write-Host -ForegroundColor "Cyan" "    Package path: $PackagePath"
-    If (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
+    if (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
     $PackageOutputPath = Join-Path -Path $PackageOutputPath -ChildPath "Output"
     Write-Host -ForegroundColor "Cyan" "    Output path: $PackageOutputPath"
 
@@ -263,10 +263,10 @@ If ($PackageName) {
         Write-Error -Message "Failed to download: $IconSource with: $($_.Exception.Message)"
         Break
     }
-    If (Test-Path -Path $ImageFile) {
+    if (Test-Path -Path $ImageFile) {
         $Icon = New-IntuneWin32AppIcon -FilePath $ImageFile
     }
-    Else {
+    else {
         Write-Error -Message "Cannot find the icon file."
         Break
     }
@@ -289,7 +289,7 @@ If ($PackageName) {
 
     }
 
-    If ($AppPath -and $AppExecutable) {
+    if ($AppPath -and $AppExecutable) {
         $params = @{
             Version              = $True
             Path                 = $AppPath
@@ -308,10 +308,10 @@ If ($PackageName) {
 
     }
 
-    # If ($DetectionRule1 -and $DetectionRule2) {
+    # if ($DetectionRule1 -and $DetectionRule2) {
     #     $DetectionRule = @($DetectionRule1, $DetectionRule2)
     # }
-    # Else {
+    # else {
     #     Write-Error -Message "Failed to create the detection rule."
     #     Break
     # }
@@ -325,7 +325,7 @@ If ($PackageName) {
 
     # Add new EXE Win32 app
     # Requires a connection via Connect-MSIntuneGraph first
-    If ($PSBoundParameters.Keys.Contains("Upload")) {
+    if ($PSBoundParameters.Keys.Contains("Upload")) {
         try {
             $params = @{
                 FilePath                 = $IntuneWinFile.FullName
@@ -346,7 +346,7 @@ If ($PackageName) {
                 Verbose                  = $true
             }
             $params | Write-Output
-            $null = Add-IntuneWin32App @params
+            $App = Add-IntuneWin32App @params
         }
         catch [System.Exception] {
             Write-Error -Message "Failed to create application: $DisplayName with: $($_.Exception.Message)"
@@ -354,8 +354,8 @@ If ($PackageName) {
         }
 
         # Create an available assignment for all users
-        <#
-            If ($Null -ne $App) {
+
+            if ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
@@ -378,13 +378,13 @@ If ($PackageName) {
                     Break
                 }
             }
-            #>
+        
     }
-    Else {
+    else {
         Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
     }
     #endregion
 }
-Else {
+else {
     Write-Error -Message "Failed to retrieve $Package update package."
 }

@@ -68,13 +68,13 @@ $Path = Join-Path $Path $PackageId
 
 #region Check if token has expired and if, request a new
 Write-Host -ForegroundColor "Cyan" "Checking for existing authentication token for tenant: $TenantName."
-If ($Null -ne $Global:AccessToken) {
+if ($Null -ne $Global:AccessToken) {
     $UtcDateTime = (Get-Date).ToUniversalTime()
     [datetime]$Global:TokenExpires = [datetime]$Global:AccessToken.ExpiresOn.DateTime
     $TokenExpireMins = ($Global:TokenExpires - $UtcDateTime).Minutes
     Write-Warning -Message "Current authentication token expires in (minutes): $($TokenExpireMins)"
 
-    If ($TokenExpireMins -le 1) {
+    if ($TokenExpireMins -le 1) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
         
         $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
@@ -177,15 +177,15 @@ $packageInfo = winget show $PackageId
     }
 
     # Download installer with winget
-    If ($PackageName) {
+    if ($PackageName) {
  
         # Test to make sure the paths we need are available.
-        If ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true)
+        if ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true)
         {
             $null = New-Item -Path $path -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
         }
 
-        If ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true)
+        if ((Test-Path $PackageOutputPath -ErrorAction SilentlyContinue) -ne $true)
         {
            $null =  New-Item -Path $PackageOutputPath -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
         }
@@ -193,7 +193,7 @@ $packageInfo = winget show $PackageId
         # Create the package folder
         $PackagePath = Join-Path -Path $Path -ChildPath "Package"
         Write-Host -ForegroundColor "Cyan" "    Package path: $PackagePath"
-        If (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
+        if (!(Test-Path -Path $PackagePath)) { New-Item -Path $PackagePath -ItemType "Directory" -Force -ErrorAction "SilentlyContinue" > $Null }
         $PackageOutputPath = Join-Path -Path $PackageOutputPath -ChildPath "Output"
         Write-Host -ForegroundColor "Cyan" "    Output path: $PackageOutputPath"
 
@@ -364,7 +364,7 @@ $packageInfo = winget show $PackageId
             }
 
             # Create an available assignment for all users
-            If ($Null -ne $App) {
+            if ($Null -ne $App) {
                 try {
                     $params = @{
                         Id                           = $App.Id
@@ -389,11 +389,11 @@ $packageInfo = winget show $PackageId
             }
 
         }
-        Else {
+        else {
             Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."
         }
         #endregion
     }
-    Else {
+    else {
         Write-Error -Message "Failed to retrieve $Package update package."
     }
