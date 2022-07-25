@@ -50,7 +50,7 @@ Param (
     $ProductCode = "{881E8C1C-858D-47BD-99E1-A40A54A555A6}",
     
     [Parameter(Mandatory = $False)]
-    $AppPath = "${env:ProgramFiles(x86)}\VMware\VMware Horizon View Client\",
+    $AppPath = "$($env:ProgramFiles)\VMware\VMware Horizon View Client\",
     
     [Parameter(Mandatory = $False)]
     $AppExecutable = "vmware-view.exe",
@@ -58,6 +58,9 @@ Param (
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
     
     $SupplementalInstallCmd = " VDM_SERVER=<VIEW.COMPANYNAME.COM>",
+
+    [Parameter(Mandatory = $False)]
+    $MinimumSupportedOperatingSystem = "21H1",
 
     [switch]$Force
 )
@@ -154,7 +157,8 @@ else {
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements --override '--silent $SupplementalInstallCmd'"
+    #$InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements --override '--silent $SupplementalInstallCmd'"
+    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
     $UpgradeCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe upgrade --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
     $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
     #To_Automate region
@@ -322,8 +326,8 @@ else {
     
         # Create custom requirement rule
         $params = @{
-            Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            Architecture                    = "x64"
+            MinimumSupportedOperatingSystem = $MinimumSupportedOperatingSystem
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 

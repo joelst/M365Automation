@@ -64,7 +64,11 @@ foreach ($script in $scripts) {
 
 if ($null -ne $global:createdPackage) {
     Write-Host "Created..."
-    $global:createdPackage
+    
+    foreach ($l in $global:createdPackage)
+    {
+        Write-Output " - $l"
+    }
 
 }
 else {

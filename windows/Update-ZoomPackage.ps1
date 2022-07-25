@@ -54,6 +54,9 @@ Param (
 
     $SupplementalInstallCmd = "zNoDesktopShortCut=1 ZoomAutoUpdate=True zRecommend='AudioAutoAdjust=1'",
 
+    [Parameter(Mandatory = $False)]
+    $MinimumSupportedOperatingSystem = "21H1",
+
     [switch]$Force
 )
     
@@ -317,7 +320,7 @@ $packageInfo = winget show $PackageId
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "21H1"
+            MinimumSupportedOperatingSystem = $MinimumSupportedOperatingSystem
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 

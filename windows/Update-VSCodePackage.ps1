@@ -55,6 +55,9 @@ Param (
 
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
+    [Parameter(Mandatory = $False)]
+    $MinimumSupportedOperatingSystem = "21H1",
+
     [switch]$Force
 )
     
@@ -351,7 +354,7 @@ if ($PrivacyURL -eq "")
         # Create custom requirement rule
         $params = @{
             Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "1607"
+            MinimumSupportedOperatingSystem = $MinimumSupportedOperatingSystem
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 

@@ -57,6 +57,9 @@ Param (
     
     $SupplementalInstallCmd = "",
 
+    [Parameter(Mandatory = $False)]
+    $MinimumSupportedOperatingSystem = "21H1",
+    
     [switch]$Force
 
 )
@@ -320,8 +323,8 @@ else {
     
         # Create custom requirement rule
         $params = @{
-            Architecture                    = "All"
-            MinimumSupportedOperatingSystem = "21H1"
+            Architecture                    = "x64"
+            MinimumSupportedOperatingSystem = $MinimumSupportedOperatingSystem
         }
         $RequirementRule = New-IntuneWin32AppRequirementRule @params
 
