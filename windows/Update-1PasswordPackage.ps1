@@ -135,6 +135,10 @@ foreach ($info in $packageInfo) {
         $DownloadUrl = $value
         Write-Verbose "  DownloadUrl = $DownloadUrl"
     }
+    if ($key -eq "Installer Url") {
+        $DownloadUrl = $value
+        Write-Verbose "  DownloadUrl = $DownloadUrl"
+    }
     if ($key -eq "Homepage") {
         $InformationURL = $value
         Write-Verbose "  InfomationUrl = $InformationUrl"

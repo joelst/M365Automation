@@ -161,7 +161,10 @@ else {
             $DownloadUrl = $value
             Write-Verbose "  DownloadUrl = $DownloadUrl"
         }
-
+        if ($key -eq "Installer Url") {
+            $DownloadUrl = $value
+            Write-Verbose "  DownloadUrl = $DownloadUrl"
+        }
     }
     
 if ($PrivacyURL -eq "")

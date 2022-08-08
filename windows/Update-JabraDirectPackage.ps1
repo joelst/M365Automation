@@ -143,6 +143,10 @@ $packageInfo = winget show $PackageId
             $InformationURL = $value
             Write-Verbose "  InfomationUrl = $InformationUrl"
         }
+        if ($key -eq "Installer Url") {
+            $DownloadUrl = $value
+            Write-Verbose "  DownloadUrl = $DownloadUrl"
+        }
     }
     
     # Variables for the package
