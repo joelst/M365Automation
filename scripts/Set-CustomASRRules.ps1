@@ -26,8 +26,7 @@ Reference: https://docs.microsoft.com/en-us/microsoft-365/security/defender-endp
     - Block untrusted and unsigned processes that run from USB b2b3f03d-6a65-4f7b-a9c7-1c7ef74a9ba4
     - Block Win32 API calls from Office macros 92e97fa1-2edf-4476-bdd6-9dd0b4dddc7b
 
-
-#> 
+#>
 [CmdletBinding()]
 param (
     # string array of all rule Ids to apply
@@ -81,7 +80,12 @@ Foreach ($ruleId in $RuleIds) {
     $actions = $actions.TrimStart(",")
 }
 
+# Existing settings
+(Get-MPPreference | Select-Object -ExpandProperty AttackSurfaceReductionRules_Ids).split(",")
+
 try {
+
+
     Add-MpPreference -AttackSurfaceReductionRules_Ids $rules -AttackSurfaceReductionRules_Actions $actions
 
     # Enable Potentially unwanted application protection
@@ -130,6 +134,12 @@ try {
     Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "DisableNotifications" -Value 1 -Type "REG_DWORD"
     # Disable SMBv1 client driver
     Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\mrxsmb10"-Name "Start" -Value 4 -Type "REG_DWORD"
+    # Set controlled folder access to enabled or audit mode
+    Set-RegInfo -RegistryPath "HKLM\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Controlled Folder Access" -Name "EnableControlledFolderAccess" -Value 1 -Type "REG_DWORD"
+    # Disable Solicited Remote Assistance
+    Set-RegInfo -RegistryPath "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Name "fAllowToGetHelp" -Value 0 -Type "REG_DWORD"
+    #
+    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "REG_DWORD"
     #
     #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "REG_DWORD"
     #
