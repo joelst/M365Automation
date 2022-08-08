@@ -51,6 +51,8 @@ function Set-RegInfo {
         $Type
     )
 
+    # Clean up entries
+    $Type = $Type.replace("REG_","")
     $RegistryPath = $RegistryPath.Replace("HKLM\", "HKLM:\").Replace("HKCU\", "HKCU:\")
     # Create the key if it does not exist
     If (-NOT (Test-Path $RegistryPath)) {
@@ -65,7 +67,7 @@ function Set-RegInfo {
 
 if ($Overwrite.IsPresent -eq $false) {
     # Get the existing rules, so we don't overwrite any
-    $existingRuleIds = (Get-MpPreference).AttackSurfaceReductionRules_Ids
+    $existingRuleIds = (Get-MpPreference).AttackSurfaceReductionRules_Ids.split(",") | Sort-Object -Unique
     $RuleIds += $existingRuleIds
 
 }
@@ -93,57 +95,57 @@ try {
 
     # Set other registry keys
     # Disable bridge
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_AllowNetBridge_NLA" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_AllowNetBridge_NLA" -Value 0 -Type "DWORD"
     # Disable always install with elevated privileges
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer" -Name "AlwaysInstallElevated" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Installer" -Name "AlwaysInstallElevated" -Value 0 -Type "DWORD"
     #Disable Javascript on Adobe DC
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown" -Name "bDisableJavaScript" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown" -Name "bDisableJavaScript" -Value 1 -Type "DWORD"
     #Disable Autorun
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Value 255 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Value 255 -Type "DWORD"
     # Disable Network bridge
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_AllowNetBridge_NLA" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_AllowNetBridge_NLA" -Value 0 -Type "DWORD"
     # don't enumerate admins
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\CredUI" -Name "EnumerateAdministrators" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\CredUI" -Name "EnumerateAdministrators" -Value 0 -Type "DWORD"
     # refuse lm and ntlm
-    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LmCompatibilityLevel" -Value 5 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LmCompatibilityLevel" -Value 5 -Type "DWORD"
     # Disable wmi basic client auth
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Client" -Name "AllowBasic" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Client" -Name "AllowBasic" -Value 0 -Type "DWORD"
     # disable wmi basic service auth
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service" -Name "AllowBasic" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service" -Name "AllowBasic" -Value 0 -Type "DWORD"
     # disable anon enumeration of shares
-    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymous" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RestrictAnonymous" -Value 1 -Type "DWORD"
     # Disable merging of local Microsoft Defender Firewall rules with group policy firewall rules for the Public profile
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "AllowLocalPolicyMerge" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "AllowLocalPolicyMerge" -Value 0 -Type "DWORD"
     # Disable merging of local Microsoft Defender Firewall connection rules with group policy firewall rules for the Public profile
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "AllowLocalIPsecPolicyMerge" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "AllowLocalIPsecPolicyMerge" -Value 0 -Type "DWORD"
     # Prohibit use of Internet Connection Sharing on your DNS domain network
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_ShowSharedAccessUI" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_ShowSharedAccessUI" -Value 0 -Type "DWORD"
     # Enable 'Apply UAC restrictions to local accounts on network logons'
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "LocalAccountTokenFilterPolicy" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "LocalAccountTokenFilterPolicy" -Value 0 -Type "DWORD"
     # Enable 'Microsoft network client: Digitally sign communications (always)'
-    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters\" -Name "RequireSecuritySignature" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters\" -Name "RequireSecuritySignature" -Value 1 -Type "DWORD"
     # Enable 'Require domain users to elevate when setting a network's location'
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_StdDomainUserSetLocation" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_StdDomainUserSetLocation" -Value 1 -Type "DWORD"
     # Disable 'Autoplay for non-volume devices'
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoAutoplayfornonVolume" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer" -Name "NoAutoplayfornonVolume" -Value 1 -Type "DWORD"
     # Disable Microsoft Defender Firewall notifications when programs are blocked for Domain profile
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -Name "DisableNotifications" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\DomainProfile" -Name "DisableNotifications" -Value 1 -Type "DWORD"
     # Disable Microsoft Defender Firewall notifications when programs are blocked for Private profile
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile" -Name "DisableNotifications" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PrivateProfile" -Name "DisableNotifications" -Value 1 -Type "DWORD"
     # Disable Microsoft Defender Firewall notifications when programs are blocked for Public profile
-    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "DisableNotifications" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile" -Name "DisableNotifications" -Value 1 -Type "DWORD"
     # Disable SMBv1 client driver
-    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\mrxsmb10"-Name "Start" -Value 4 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\mrxsmb10"-Name "Start" -Value 4 -Type "DWORD"
     # Set controlled folder access to enabled or audit mode
-    Set-RegInfo -RegistryPath "HKLM\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Controlled Folder Access" -Name "EnableControlledFolderAccess" -Value 1 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Controlled Folder Access" -Name "EnableControlledFolderAccess" -Value 1 -Type "DWORD"
     # Disable Solicited Remote Assistance
-    Set-RegInfo -RegistryPath "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Name "fAllowToGetHelp" -Value 0 -Type "REG_DWORD"
+    Set-RegInfo -RegistryPath "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Name "fAllowToGetHelp" -Value 0 -Type "DWORD"
     #
-    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "REG_DWORD"
+    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
     #
-    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "REG_DWORD"
+    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
     #
-    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "REG_DWORD"
+    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
     exit 0
 }
 catch {
