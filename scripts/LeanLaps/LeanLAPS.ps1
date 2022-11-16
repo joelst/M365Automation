@@ -21,8 +21,8 @@ param (
     $minimumPasswordLength = 21,
     $publicEncryptionKey = "", # If you supply a public encryption key, LeanLAPS will use this to encrypt the password, ensuring it will only be in encrypted in Proactive Remediation
     $localAdminName = "LocalAdmin",
-    $removeOtherLocalAdmins = $true, # if set to True, will remove ALL other local admins, including those set through AzureAD device settings
-    $disableBuiltinAdminAccount = $true, #Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
+    $removeOtherLocalAdmins = $true, # Removes ALL other local admins, including those set through AzureAD device settings
+    $disableBuiltinAdminAccount = $true, # Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
     $doNotRunOnServers = $true, # Built-in protection in case an admin accidentally assigns this script to e.g. a domain controller
     # Specify SIDs for Azure groups such as Global Admins and Device Administrators or for local or domain users to not remove from local admins. These are specific to your tenant, you can get them on a device by running:
     # ([ADSI]::new("WinNT://$($env:COMPUTERNAME)/$((New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]).Value.Split("\")[1]),Group")).Invoke('Members') | % {"$((New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList @([Byte[]](([ADSI]$_).properties.objectSid).Value, 0)).Value) <--- a.k.a: $(([ADSI]$_).Path.Split("/")[-1])"}

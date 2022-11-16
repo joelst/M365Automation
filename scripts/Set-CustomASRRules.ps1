@@ -42,6 +42,50 @@ param (
     [switch]$Overwrite
 )
 
+function Set-LocalAccountPolicy {
+    <#
+    Description
+    I needed a quick way to enforce the following settings when a configuration profile wasn't working. It's not the right way, but it worked.
+#>
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [int]
+        $MinPwdLength = 12,
+        [Parameter()]
+        [int]
+        $MinPwdAge = 1,
+        [Parameter()]
+        [int]
+        $LockoutDuration = 15,
+        [Parameter()]
+        [int]
+        $LockoutThreshold = 10,
+        [Parameter()]
+        [int]
+        $LockoutWindow = 15
+    )
+    function Set-RegInfo {
+        [CmdletBinding()]
+        param (
+            $Path,
+            $Name,
+            $Value,
+            $PropertyType
+        )
+
+        # Create the key if it does not exist
+        if (-NOT (Test-Path $Path)) {
+            New-Item -Path $Path -Force | Out-Null
+        }
+        # Now set the value
+        $null = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType -Force -ErrorAction Continue
+    }
+
+    Invoke-Command { net accounts /minpwlen:$MinPwdLength /minpwage:$MinPwdAge /lockoutduration:$LockoutDuration /lockoutthreshold:$LockoutThreshold /lockoutwindow:$LockoutWindow }
+}
+
+
 function Set-RegInfo {
     [CmdletBinding()]
     param (
@@ -52,8 +96,8 @@ function Set-RegInfo {
     )
 
     # Clean up entries
-    $Type = $Type.replace("REG_","")
-    $RegistryPath = $RegistryPath.Replace("HKLM\", "HKLM:\").Replace("HKCU\", "HKCU:\")
+    $Type = $Type.replace("REG_", "")
+    $RegistryPath = $RegistryPath.Replace("HKLM\", "HKLM:\").Replace("HKCU\", "HKCU:\").Replace("HCU\", "HCU:\")
     # Create the key if it does not exist
     If (-NOT (Test-Path $RegistryPath)) {
         New-Item -Path $RegistryPath -Force | Out-Null
@@ -83,10 +127,10 @@ Foreach ($ruleId in $RuleIds) {
 }
 
 # Existing settings
-(Get-MPPreference | Select-Object -ExpandProperty AttackSurfaceReductionRules_Ids).split(",")
+(Get-MpPreference | Select-Object -ExpandProperty AttackSurfaceReductionRules_Ids).split(",") | Sort-Object -Unique
+Get-MpPreference | fl all*, c*, d*, e*, r*, s*
 
 try {
-
 
     Add-MpPreference -AttackSurfaceReductionRules_Ids $rules -AttackSurfaceReductionRules_Actions $actions
 
@@ -102,6 +146,8 @@ try {
     Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown" -Name "bDisableJavaScript" -Value 1 -Type "DWORD"
     #Disable Autorun
     Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoDriveTypeAutoRun" -Value 255 -Type "DWORD"
+    #Disable all Autorun
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" -Name "NoAutoRun" -Value 1 -Type "DWORD"
     # Disable Network bridge
     Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Network Connections" -Name "NC_AllowNetBridge_NLA" -Value 0 -Type "DWORD"
     # don't enumerate admins
@@ -137,19 +183,29 @@ try {
     # Disable SMBv1 client driver
     Set-RegInfo -RegistryPath "HKLM:\SYSTEM\CurrentControlSet\Services\mrxsmb10"-Name "Start" -Value 4 -Type "DWORD"
     # Set controlled folder access to enabled or audit mode
-    Set-RegInfo -RegistryPath "HKLM\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Controlled Folder Access" -Name "EnableControlledFolderAccess" -Value 1 -Type "DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\Software\Policies\Microsoft\Windows Defender\Windows Defender Exploit Guard\Controlled Folder Access" -Name "EnableControlledFolderAccess" -Value 1 -Type "DWORD"
     # Disable Solicited Remote Assistance
-    Set-RegInfo -RegistryPath "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Name "fAllowToGetHelp" -Value 0 -Type "DWORD"
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" -Name "fAllowToGetHelp" -Value 0 -Type "DWORD"
+    # Set User Account Control to automatically deny elevation requests 
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "ConsentPromptBehaviorUser" -Value 0 -Type "DWORD"
+    # Disable running or installing downloaded software with invalid signature
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Download" -Name "RunInvalidSignatures" -Value 0 -Type "DWORD"
+    # Block outdated ActiveX controls for Internet Explorer
+    Set-RegInfo -RegistryPath "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Ext" -Name "VersionCheckEnabled" -Value 1 -Type "DWORD"
+    # Set OneDrive Sync Reports
+    Set-RegInfo -RegistryPath "HKLM\SOFTWARE\Policies\Microsoft\OneDrive" -Name "EnableSyncAdminReports" -Value 1 -Type "DWORD"
     #
     #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
     #
     #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
-    #
-    #Set-RegInfo -RegistryPath "" -Name "" -Value 0 -Type "DWORD"
+    Write-Output "Completed $(Get-Date)"
+    # Set Local account policy
+    Set-LocalAccountPolicy
     exit 0
 }
 catch {
     $errorMessage = $_.Exception.Message
     Write-Error $errorMessage
+    Write-Output "Error occurred $(Get-Date)"
     exit 1
 }

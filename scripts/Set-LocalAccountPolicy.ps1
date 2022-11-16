@@ -24,19 +24,23 @@ param (
 function Set-RegInfo {
     [CmdletBinding()]
     param (
-        $Path,
+        $RegistryPath,
         $Name,
         $Value,
-        $PropertyType
+        $Type
     )
-    
-# Create the key if it does not exist
-    if (-NOT (Test-Path $Path)) {
-    New-Item -Path $Path -Force | Out-Null
-    }  
+
+    # Clean up entries
+    $Type = $Type.replace("REG_", "")
+    $RegistryPath = $RegistryPath.Replace("HKLM\", "HKLM:\").Replace("HKCU\", "HKCU:\").Replace("HCU\", "HCU:\")
+    # Create the key if it does not exist
+    If (-NOT (Test-Path $RegistryPath)) {
+        New-Item -Path $RegistryPath -Force | Out-Null
+    }
     # Now set the value
-    $null = New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType -Force -ErrorAction Continue
+    $null = New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType $Type -Force
 }
 
 
-Invoke-Command {net accounts /minpwlen:$MinPwdLength /minpwage:$MinPwdAge /lockoutduration:$LockoutDuration /lockoutthreshold:$LockoutThreshold /lockoutwindow:$LockoutWindow}
+Invoke-Command {net accounts /minpwlen:$MinPwdLength /minpwage:$MinPwdAge /lockoutduration:$LockoutDuration /lockoutthreshold:$LockoutThreshold /lockoutwindow:$LockoutWindow }
+exit 0

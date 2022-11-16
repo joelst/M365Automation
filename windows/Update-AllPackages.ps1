@@ -1,4 +1,4 @@
-#Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD
+#Requires -Modules IntuneWin32App, PSIntuneAuth, AzureAD, Cobalt
 <#
     .SYNOPSIS
         Execute all Update-*.ps1 in the specified path to create an update factory. 
@@ -38,8 +38,10 @@ Param (
 )
 
 $global:createdPackage = @()
+
+$ScriptPath = Join-Path $ScriptPath "/*.ps1"
 ## FIND ALL Update-*.ps1 files in $ScriptPath, using -filter and -include was not working so using this sloppy Get-ChildItem
-$Scripts = (Get-ChildItem -Path $ScriptPath -Exclude "Update-AllPackages.ps1", "*.json", "New-*.ps1").FullName
+$Scripts = (Get-ChildItem -Path $ScriptPath -Include "*.ps1" -Exclude "Update-AllPackages.ps1", "New-*.ps1").FullName
 
 Write-Output "`n Found $($scripts.Count) scripts to run"
 Write-Verbose "The following scripts will be executed"
