@@ -154,6 +154,18 @@ else {
         }
     }
     
+    if ([string]::IsNullOrWhiteSpace($InformationURL)){
+        $InformationUrl = "https://bing.com/$packageName"
+    }
+    
+    if ([string]::IsNullOrWhiteSpace($PublisherURL)){
+        $PublisherUrl = "https://bing.com/$packageName"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($PrivacyURL)){
+        $PrivacyUrl = "https://bing.com/$packageName"
+    }
+
     # Variables for the package
     $DisplayName = $PackageName ##+ " " + $PackageVersion
 

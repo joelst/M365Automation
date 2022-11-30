@@ -22,7 +22,7 @@ Function ConnectMSGraphModule {
     Connect-MSGraph
 }
         
-function getDeviceInfo {
+function Get-DeviceInfo {
         
     If($inputBox.Text -ne 'Device Name') {
 			
@@ -30,16 +30,20 @@ function getDeviceInfo {
         
             #Connect to GraphAPI and get leanLAPS for a specific device that was supplied through the GUI
             $graphApiVersion = "beta"
-			$deviceInfoURL = [uri]::EscapeUriString("https://graph.microsoft.com/$graphApiVersion/deviceManagement/deviceHealthScripts/$remediationScriptID/deviceRunStates?`$select=postRemediationDetectionScriptOutput&`$filter=managedDevice/deviceName eq '" + $inputBox.text + "'&`$expand=managedDevice(`$select=deviceName,operatingSystem,osVersion,emailAddress)")
+			$deviceInfoURL = [uri]::EscapeUriString("https://graph.microsoft.com/$graphApiVersion/deviceManagement/deviceHealthScripts/$remediationScriptID/deviceRunStates?`$select=postRemediationDetectionScriptOutput&`$expand=managedDevice(`$select=deviceName,operatingSystem,osVersion,emailAddress)&`$filter=managedDevice/deviceName eq '" + $inputBox.text + "'")
 
             #Get information needed from MSGraph call about the Proactive Remediation Device Status
             $device = $Null
             $deviceStatus = $Null
-            $deviceStatuses = (Invoke-MSGraphRequest -Url $deviceInfoURL -HttpMethod Get).value
+            $deviceStatuses = (Invoke-MSGraphRequest -Url $deviceInfoURL -HttpMethod Get) | Get-MSGraphAllPages
             foreach($device in $deviceStatuses){
-                if($deviceStatus){
+                if($device.managedDevice.deviceName -ne $inputBox.text){
+                    Write-Host "Filtering out result $($device.managedDevice.deviceName) because it does not match $($inputBox.text)"
+                    continue
+                }
+                if($deviceStatus.postRemediationDetectionScriptOutput){
                     try{
-                        if([DateTime]($device.postRemediationDetectionScriptOutput -Replace(".* changed on ","")) -gt [DateTime]($deviceStatus.postRemediationDetectionScriptOutput -Replace(".* changed on ",""))){
+                        if((($device.postRemediationDetectionScriptOutput) | ConvertFrom-Json).Date.value -gt (($deviceStatus.postRemediationDetectionScriptOutput) | ConvertFrom-Json).Date.value){
                             $deviceStatus = $device
                         }
                     }catch{$Null}
@@ -48,37 +52,50 @@ function getDeviceInfo {
                 }
             }
 
-            $LocalAdminUsername = $deviceStatus.postRemediationDetectionScriptOutput -replace ".* for " -replace ", last changed on.*"
-            $deviceName = $deviceStatus.managedDevice.deviceName
-            $userSignedIn = $deviceStatus.managedDevice.emailAddress
-            $deviceOS = $deviceStatus.managedDevice.operatingSystem
-            $deviceOSVersion = $deviceStatus.managedDevice.osVersion
-            $laps = $deviceStatus.postRemediationDetectionScriptOutput -replace ".*LeanLAPS current password: " -replace " for $LocalAdminUsername, last changed on.*"
-			$lastChanged = $deviceStatus.postRemediationDetectionScriptOutput -replace ".* for $LocalAdminUsername, last changed on "
+            if($deviceStatus.postRemediationDetectionScriptOutput){
+                $postRemediationDetectionScriptOutput = $deviceStatus.postRemediationDetectionScriptOutput | ConvertFrom-Json
+                $LocalAdminUsername = $postRemediationDetectionScriptOutput.Username
+                $deviceName = $deviceStatus.managedDevice.deviceName
+                $userSignedIn = $deviceStatus.managedDevice.emailAddress
+                $deviceOS = $deviceStatus.managedDevice.operatingSystem
+                $deviceOSVersion = $deviceStatus.managedDevice.osVersion
+                $laps = $postRemediationDetectionScriptOutput.SecurePassword
+			    $lastChanged = $postRemediationDetectionScriptOutput.Date.value
         
-            # Adding properties to object
-            $deviceInfoDisplay = New-Object PSCustomObject
+                # Adding properties to object
+                $deviceInfoDisplay = New-Object PSCustomObject
         
-            # Add collected properties to object
-            $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Local Username" -Value (".\" + $LocalAdminUsername)
-            if($privateKey.Length -lt 5){
-                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password" -Value $laps
+                #Unescape escaped characters as Windows PowerShell's implementation does for <>'&
+                $laps = [regex]::replace(
+                  $laps, 
+                  '(?<=(?:^|[^\\])(?:\\\\)*)\\u(00(?:26|27|3c|3e))', 
+                  { param($match) [char] [int] ('0x' + $match.Groups[1].Value) },
+                  'IgnoreCase'
+                )
+
+                # Add collected properties to object
+                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Local Username" -Value (".\" + $LocalAdminUsername)
+                if($privateKey.Length -lt 5){
+                    $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password" -Value $laps
+                }else{
+                    $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
+                    $rsa.ImportCspBlob([byte[]]($privateKey -split ","))
+                    $decrypted = $rsa.Decrypt([byte[]]($laps -split " "), $false)
+                    $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password" -Value ([System.Text.Encoding]::UTF8.GetString($decrypted))
+                }
+			    $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password Changed" -Value $lastChanged
+                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Device Name" -Value $deviceName
+                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "User" -Value $userSignedIn
+                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Device OS" -Value $deviceOS
+                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "OS Version" -Value $deviceOSVersion
+        
+                If($deviceInfoDisplay.Password) {
+                    $outputBox.text = ($deviceInfoDisplay | Out-String).Trim()
+                } Else {
+                    $outputBox.text="Failed to gather information. Please check the device name."
+                }
             }else{
-                $rsa = New-Object System.Security.Cryptography.RSACryptoServiceProvider
-                $rsa.ImportCspBlob([byte[]]($privateKey -split ","))
-                $decrypted = $rsa.Decrypt([byte[]]($laps -split " "), $false)
-                $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password" -Value ([System.Text.Encoding]::UTF8.GetString($decrypted))
-            }
-			$deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password Changed" -Value $lastChanged
-            $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Device Name" -Value $deviceName
-            $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "User" -Value $userSignedIn
-            $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Device OS" -Value $deviceOS
-            $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "OS Version" -Value $deviceOSVersion
-        
-            If($deviceInfoDisplay.Password) {
-                $outputBox.text = ($deviceInfoDisplay | Out-String).Trim()
-            } Else {
-                $outputBox.text="Failed to gather information. Please check the device name."
+                $outputBox.text = "Device name not found or remediation did not yet run"
             }
         } Else {
             $outputBox.text="Device name has not been provided. Please type a device name and then click `"Device Info`""
@@ -203,7 +220,7 @@ $deviceInformation.Location = New-Object System.Drawing.Size(15,80)
 $deviceInformation.Size = New-Object System.Drawing.Size(150,60)
 $deviceInformation.Text = "Device Info"
 $deviceInformation.TabIndex = 1
-$deviceInformation.Add_Click({getDeviceInfo})
+$deviceInformation.Add_Click({Get-DeviceInfo})
 $deviceInformation.Enabled = $False #Disable Device Info button until end user types something into the inputbox
 $deviceInformation.Cursor = [System.Windows.Forms.Cursors]::Hand
 $groupBox.Controls.Add($deviceInformation)

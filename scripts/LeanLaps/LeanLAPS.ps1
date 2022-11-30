@@ -15,12 +15,14 @@
     Customization by:   Joel Stidley https://github.com/joelst/
         - Updated password generator to remove commonly confused characters, like i,l,1,0, and O
         - Added Set-LocalUser try/catch if there are errors using ADSI password set option.
+        - Updated 11/30/2022
 #>
 [CmdletBinding()]
 param (
     $minimumPasswordLength = 21,
     $publicEncryptionKey = "", # If you supply a public encryption key, LeanLAPS will use this to encrypt the password, ensuring it will only be in encrypted in Proactive Remediation
     $localAdminName = "LocalAdmin",
+    $autoEnableLocalAdmin = $false, #if for some reason the admin account this script creates becomes disabled, leanLAPS will re-enable it
     $removeOtherLocalAdmins = $true, # Removes ALL other local admins, including those set through AzureAD device settings
     $disableBuiltinAdminAccount = $true, # Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
     $doNotRunOnServers = $true, # Built-in protection in case an admin accidentally assigns this script to e.g. a domain controller
@@ -29,9 +31,11 @@ param (
     $approvedAdmins = @(
 
     )
+
 )
 
 $markerFile = Join-Path $Env:TEMP -ChildPath "LeanLAPS.marker"
+$markerFileExists = (Test-Path $markerFile)
 
 function Get-NewPassword {
     <#
@@ -138,7 +142,7 @@ function Write-CustomEventLog {
     )
 
     $EventSource = "LeanLAPS"
-    if ([System.Diagnostics.EventLog]::Exists('Application') -eq $False -or [System.Diagnostics.EventLog]::SourceExists($EventSource) -eq $False) {
+    if ([System.Diagnostics.EventLog]::Exists('Application') -eq $false -or [System.Diagnostics.EventLog]::SourceExists($EventSource) -eq $false) {
         $null = New-EventLog -LogName Application -Source $EventSource | Out-Null
     }
 
@@ -174,11 +178,17 @@ else {
         else {
             # Ensure the plain text password is removed from Microsoft Endpoint Manager log files and registry (which are written after a delay):
             $triggers = @((New-ScheduledTaskTrigger -At (Get-Date).AddMinutes(5) -Once), (New-ScheduledTaskTrigger -At (Get-Date).AddMinutes(10) -Once), (New-ScheduledTaskTrigger -At (Get-Date).AddMinutes(30) -Once))
-            $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ex bypass -EncodedCommand RnVuY3Rpb24gV3JpdGUtQ3VzdG9tRXZlbnRMb2coJE1lc3NhZ2UpewogICAgJEV2ZW50U291cmNlPSJMZWFuTEFQUyIKICAgIGlmIChbU3lzdGVtLkRpYWdub3N0aWNzLkV2ZW50TG9nXTo6RXhpc3RzKCdBcHBsaWNhdGlvbicpIC1lcSAkRmFsc2UgLW9yIFtTeXN0ZW0uRGlhZ25vc3RpY3MuRXZlbnRMb2ddOjpTb3VyY2VFeGlzdHMoJEV2ZW50U291cmNlKSAtZXEgJEZhbHNlKXsKICAgICAgICAkcmVzID0gTmV3LUV2ZW50TG9nIC1Mb2dOYW1lIEFwcGxpY2F0aW9uIC1Tb3VyY2UgJEV2ZW50U291cmNlICB8IE91dC1OdWxsCiAgICB9CiAgICAkcmVzID0gV3JpdGUtRXZlbnRMb2cgLUxvZ05hbWUgQXBwbGljYXRpb24gLVNvdXJjZSAkRXZlbnRTb3VyY2UgLUVudHJ5VHlwZSBJbmZvcm1hdGlvbiAtRXZlbnRJZCAxOTg1IC1NZXNzYWdlICRNZXNzYWdlCn0KCiN3aXBlIHBhc3N3b3JkIGZyb20gbG9nZmlsZXMKdHJ5ewogICAgJGludHVuZUxvZzEgPSBKb2luLVBhdGggJEVudjpQcm9ncmFtRGF0YSAtY2hpbGRwYXRoICJNaWNyb3NvZnRcSW50dW5lTWFuYWdlbWVudEV4dGVuc2lvblxMb2dzXEFnZW50RXhlY3V0b3IubG9nIgogICAgJGludHVuZUxvZzIgPSBKb2luLVBhdGggJEVudjpQcm9ncmFtRGF0YSAtY2hpbGRwYXRoICJNaWNyb3NvZnRcSW50dW5lTWFuYWdlbWVudEV4dGVuc2lvblxMb2dzXEludHVuZU1hbmFnZW1lbnRFeHRlbnNpb24ubG9nIgogICAgU2V0LUNvbnRlbnQgLUZvcmNlIC1Db25maXJtOiRGYWxzZSAtUGF0aCAkaW50dW5lTG9nMSAtVmFsdWUgKEdldC1Db250ZW50IC1QYXRoICRpbnR1bmVMb2cxIHwgU2VsZWN0LVN0cmluZyAtUGF0dGVybiAiUGFzc3dvcmQiIC1Ob3RNYXRjaCkKICAgIFNldC1Db250ZW50IC1Gb3JjZSAtQ29uZmlybTokRmFsc2UgLVBhdGggJGludHVuZUxvZzIgLVZhbHVlIChHZXQtQ29udGVudCAtUGF0aCAkaW50dW5lTG9nMiB8IFNlbGVjdC1TdHJpbmcgLVBhdHRlcm4gIlBhc3N3b3JkIiAtTm90TWF0Y2gpCn1jYXRjaHskTnVsbH0KCiNvbmx5IHdpcGUgcmVnaXN0cnkgZGF0YSBhZnRlciBkYXRhIGhhcyBiZWVuIHNlbnQgdG8gTXNmdAppZigoR2V0LUNvbnRlbnQgLVBhdGggJGludHVuZUxvZzIgfCBTZWxlY3QtU3RyaW5nIC1QYXR0ZXJuICJQb2xpY3kgcmVzdWx0cyBhcmUgc3VjY2Vzc2Z1bGx5IHNlbnQuIikpewogICAgV3JpdGUtQ3VzdG9tRXZlbnRMb2cgIk1pY3Jvc29mdCBFbmRwb2ludCBNYW5hZ2VyIGxvZ2ZpbGUgaW5kaWNhdGVzIHNjcmlwdCByZXN1bHRzIGhhdmUgYmVlbiByZXBvcnRlZCB0byBNaWNyb3NvZnQiCiAgICBTZXQtQ29udGVudCAtRm9yY2UgLUNvbmZpcm06JEZhbHNlIC1QYXRoICRpbnR1bmVMb2cyIC1WYWx1ZSAoR2V0LUNvbnRlbnQgLVBhdGggJGludHVuZUxvZzIgfCBTZWxlY3QtU3RyaW5nIC1QYXR0ZXJuICJQb2xpY3kgcmVzdWx0cyBhcmUgc3VjY2Vzc2Z1bGx5IHNlbnQuIiAtTm90TWF0Y2gpCiAgICBTdGFydC1TbGVlcCAtcyA5MAogICAgdHJ5ewogICAgICAgIGZvcmVhY2goJFRlbmFudCBpbiAoR2V0LUNoaWxkSXRlbSAiSEtMTTpcU29mdHdhcmVcTWljcm9zb2Z0XEludHVuZU1hbmFnZW1lbnRFeHRlbnNpb25cU2lkZUNhclBvbGljaWVzXFNjcmlwdHNcUmVwb3J0cyIpKXsKICAgICAgICAgICAgZm9yZWFjaCgkc2NyaXB0IGluIChHZXQtQ2hpbGRJdGVtICRUZW5hbnQuUFNQYXRoKSl7CiAgICAgICAgICAgICAgICAkanNvbiA9ICgoR2V0LUl0ZW1Qcm9wZXJ0eSAtUGF0aCAoSm9pbi1QYXRoICRzY3JpcHQuUFNQYXRoIC1DaGlsZFBhdGggIlJlc3VsdCIpIC1OYW1lICJSZXN1bHQiKS5SZXN1bHQgfCBDb252ZXJ0ZnJvbS1Kc29uKQogICAgICAgICAgICAgICAgaWYoJGpzb24uUG9zdFJlbWVkaWF0aW9uRGV0ZWN0U2NyaXB0T3V0cHV0LlN0YXJ0c1dpdGgoIkxlYW5MQVBTIikpewogICAgICAgICAgICAgICAgICAgICRqc29uLlBvc3RSZW1lZGlhdGlvbkRldGVjdFNjcmlwdE91dHB1dCA9ICJSRURBQ1RFRCIKICAgICAgICAgICAgICAgICAgICBTZXQtSXRlbVByb3BlcnR5IC1QYXRoIChKb2luLVBhdGggJHNjcmlwdC5QU1BhdGggLUNoaWxkUGF0aCAiUmVzdWx0IikgLU5hbWUgIlJlc3VsdCIgLVZhbHVlICgkanNvbiB8IENvbnZlcnRUby1Kc29uIC1EZXB0aCAxMCAtQ29tcHJlc3MpIC1Gb3JjZSAtQ29uZmlybTokRmFsc2UKICAgICAgICAgICAgICAgICAgICBXcml0ZS1DdXN0b21FdmVudExvZyAicmVkYWN0ZWQgYWxsIGxvY2FsIGRhdGEiCiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9Y2F0Y2h7JE51bGx9Cn0=" #base64 UTF16-LE encoded command https://www.base64encode.org/
-            $Null = Register-ScheduledTask -TaskName "LeanLAPS_WL" -Trigger $triggers -User "SYSTEM" -Action $Action -Force
+            $Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ex bypass -EncodedCommand RgB1AG4AYwB0AGkAbwBuACAAVwByAGkAdABlAC0AQwB1AHMAdABvAG0ARQB2AGUAbgB0AEwAbwBnACgAJABNAGUAcwBzAGEAZwBlACkAewAKACAAIAAgACAAJABFAHYAZQBuAHQAUwBvAHUAcgBjAGUAPQAiAC4ATABpAGUAYgBlAG4AQwBvAG4AcwB1AGwAdABhAG4AYwB5ACIACgAgACAAIAAgAGkAZgAgACgAWwBTAHkAcwB0AGUAbQAuAEQAaQBhAGcAbgBvAHMAdABpAGMAcwAuAEUAdgBlAG4AdABMAG8AZwBdADoAOgBFAHgAaQBzAHQAcwAoACcAQQBwAHAAbABpAGMAYQB0AGkAbwBuACcAKQAgAC0AZQBxACAAJABGAGEAbABzAGUAIAAtAG8AcgAgAFsAUwB5AHMAdABlAG0ALgBEAGkAYQBnAG4AbwBzAHQAaQBjAHMALgBFAHYAZQBuAHQATABvAGcAXQA6ADoAUwBvAHUAcgBjAGUARQB4AGkAcwB0AHMAKAAkAEUAdgBlAG4AdABTAG8AdQByAGMAZQApACAALQBlAHEAIAAkAEYAYQBsAHMAZQApAHsACgAgACAAIAAgACAAIAAgACAAJAByAGUAcwAgAD0AIABOAGUAdwAtAEUAdgBlAG4AdABMAG8AZwAgAC0ATABvAGcATgBhAG0AZQAgAEEAcABwAGwAaQBjAGEAdABpAG8AbgAgAC0AUwBvAHUAcgBjAGUAIAAkAEUAdgBlAG4AdABTAG8AdQByAGMAZQAgACAAfAAgAE8AdQB0AC0ATgB1AGwAbAAKACAAIAAgACAAfQAKACAAIAAgACAAJAByAGUAcwAgAD0AIABXAHIAaQB0AGUALQBFAHYAZQBuAHQATABvAGcAIAAtAEwAbwBnAE4AYQBtAGUAIABBAHAAcABsAGkAYwBhAHQAaQBvAG4AIAAtAFMAbwB1AHIAYwBlACAAJABFAHYAZQBuAHQAUwBvAHUAcgBjAGUAIAAtAEUAbgB0AHIAeQBUAHkAcABlACAASQBuAGYAbwByAG0AYQB0AGkAbwBuACAALQBFAHYAZQBuAHQASQBkACAAMQA5ADgANQAgAC0ATQBlAHMAcwBhAGcAZQAgACQATQBlAHMAcwBhAGcAZQAKAH0ACgAKACMAdwBpAHAAZQAgAHAAYQBzAHMAdwBvAHIAZAAgAGYAcgBvAG0AIABsAG8AZwBmAGkAbABlAHMACgB0AHIAeQB7AAoAIAAgACAAIAAkAGkAbgB0AHUAbgBlAEwAbwBnADEAIAA9ACAASgBvAGkAbgAtAFAAYQB0AGgAIAAkAEUAbgB2ADoAUAByAG8AZwByAGEAbQBEAGEAdABhACAALQBjAGgAaQBsAGQAcABhAHQAaAAgACIATQBpAGMAcgBvAHMAbwBmAHQAXABJAG4AdAB1AG4AZQBNAGEAbgBhAGcAZQBtAGUAbgB0AEUAeAB0AGUAbgBzAGkAbwBuAFwATABvAGcAcwBcAEEAZwBlAG4AdABFAHgAZQBjAHUAdABvAHIALgBsAG8AZwAiAAoAIAAgACAAIAAkAGkAbgB0AHUAbgBlAEwAbwBnADIAIAA9ACAASgBvAGkAbgAtAFAAYQB0AGgAIAAkAEUAbgB2ADoAUAByAG8AZwByAGEAbQBEAGEAdABhACAALQBjAGgAaQBsAGQAcABhAHQAaAAgACIATQBpAGMAcgBvAHMAbwBmAHQAXABJAG4AdAB1AG4AZQBNAGEAbgBhAGcAZQBtAGUAbgB0AEUAeAB0AGUAbgBzAGkAbwBuAFwATABvAGcAcwBcAEkAbgB0AHUAbgBlAE0AYQBuAGEAZwBlAG0AZQBuAHQARQB4AHQAZQBuAHMAaQBvAG4ALgBsAG8AZwAiAAoAIAAgACAAIABTAGUAdAAtAEMAbwBuAHQAZQBuAHQAIAAtAEYAbwByAGMAZQAgAC0AQwBvAG4AZgBpAHIAbQA6ACQARgBhAGwAcwBlACAALQBQAGEAdABoACAAJABpAG4AdAB1AG4AZQBMAG8AZwAxACAALQBWAGEAbAB1AGUAIAAoAEcAZQB0AC0AQwBvAG4AdABlAG4AdAAgAC0AUABhAHQAaAAgACQAaQBuAHQAdQBuAGUATABvAGcAMQAgAHwAIABTAGUAbABlAGMAdAAtAFMAdAByAGkAbgBnACAALQBQAGEAdAB0AGUAcgBuACAAIgBQAGEAcwBzAHcAbwByAGQAIgAgAC0ATgBvAHQATQBhAHQAYwBoACkACgAgACAAIAAgAFMAZQB0AC0AQwBvAG4AdABlAG4AdAAgAC0ARgBvAHIAYwBlACAALQBDAG8AbgBmAGkAcgBtADoAJABGAGEAbABzAGUAIAAtAFAAYQB0AGgAIAAkAGkAbgB0AHUAbgBlAEwAbwBnADIAIAAtAFYAYQBsAHUAZQAgACgARwBlAHQALQBDAG8AbgB0AGUAbgB0ACAALQBQAGEAdABoACAAJABpAG4AdAB1AG4AZQBMAG8AZwAyACAAfAAgAFMAZQBsAGUAYwB0AC0AUwB0AHIAaQBuAGcAIAAtAFAAYQB0AHQAZQByAG4AIAAiAFAAYQBzAHMAdwBvAHIAZAAiACAALQBOAG8AdABNAGEAdABjAGgAKQAKAH0AYwBhAHQAYwBoAHsAJABOAHUAbABsAH0ACgAKACMAbwBuAGwAeQAgAHcAaQBwAGUAIAByAGUAZwBpAHMAdAByAHkAIABkAGEAdABhACAAYQBmAHQAZQByACAAZABhAHQAYQAgAGgAYQBzACAAYgBlAGUAbgAgAHMAZQBuAHQAIAB0AG8AIABNAHMAZgB0AAoAaQBmACgAKABHAGUAdAAtAEMAbwBuAHQAZQBuAHQAIAAtAFAAYQB0AGgAIAAkAGkAbgB0AHUAbgBlAEwAbwBnADIAIAB8ACAAUwBlAGwAZQBjAHQALQBTAHQAcgBpAG4AZwAgAC0AUABhAHQAdABlAHIAbgAgACIAUABvAGwAaQBjAHkAIAByAGUAcwB1AGwAdABzACAAYQByAGUAIABzAHUAYwBjAGUAcwBzAGYAdQBsAGwAeQAgAHMAZQBuAHQALgAiACkAKQB7AAoAIAAgACAAIABXAHIAaQB0AGUALQBDAHUAcwB0AG8AbQBFAHYAZQBuAHQATABvAGcAIAAiAEkAbgB0AHUAbgBlACAAbABvAGcAZgBpAGwAZQAgAGkAbgBkAGkAYwBhAHQAZQBzACAAcwBjAHIAaQBwAHQAIAByAGUAcwB1AGwAdABzACAAaABhAHYAZQAgAGIAZQBlAG4AIAByAGUAcABvAHIAdABlAGQAIAB0AG8AIABNAGkAYwByAG8AcwBvAGYAdAAiAAoAIAAgACAAIABTAGUAdAAtAEMAbwBuAHQAZQBuAHQAIAAtAEYAbwByAGMAZQAgAC0AQwBvAG4AZgBpAHIAbQA6ACQARgBhAGwAcwBlACAALQBQAGEAdABoACAAJABpAG4AdAB1AG4AZQBMAG8AZwAyACAALQBWAGEAbAB1AGUAIAAoAEcAZQB0AC0AQwBvAG4AdABlAG4AdAAgAC0AUABhAHQAaAAgACQAaQBuAHQAdQBuAGUATABvAGcAMgAgAHwAIABTAGUAbABlAGMAdAAtAFMAdAByAGkAbgBnACAALQBQAGEAdAB0AGUAcgBuACAAIgBQAG8AbABpAGMAeQAgAHIAZQBzAHUAbAB0AHMAIABhAHIAZQAgAHMAdQBjAGMAZQBzAHMAZgB1AGwAbAB5ACAAcwBlAG4AdAAuACIAIAAtAE4AbwB0AE0AYQB0AGMAaAApAAoAIAAgACAAIABTAHQAYQByAHQALQBTAGwAZQBlAHAAIAAtAHMAIAA5ADAACgAgACAAIAAgAHQAcgB5AHsACgAgACAAIAAgACAAIAAgACAAZgBvAHIAZQBhAGMAaAAoACQAVABlAG4AYQBuAHQAIABpAG4AIAAoAEcAZQB0AC0AQwBoAGkAbABkAEkAdABlAG0AIAAiAEgASwBMAE0AOgBcAFMAbwBmAHQAdwBhAHIAZQBcAE0AaQBjAHIAbwBzAG8AZgB0AFwASQBuAHQAdQBuAGUATQBhAG4AYQBnAGUAbQBlAG4AdABFAHgAdABlAG4AcwBpAG8AbgBcAFMAaQBkAGUAQwBhAHIAUABvAGwAaQBjAGkAZQBzAFwAUwBjAHIAaQBwAHQAcwBcAFIAZQBwAG8AcgB0AHMAIgApACkAewAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgAGYAbwByAGUAYQBjAGgAKAAkAHMAYwByAGkAcAB0ACAAaQBuACAAKABHAGUAdAAtAEMAaABpAGwAZABJAHQAZQBtACAAJABUAGUAbgBhAG4AdAAuAFAAUwBQAGEAdABoACkAKQB7AAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAkAGoAcwBvAG4AIAA9ACAAKAAoAEcAZQB0AC0ASQB0AGUAbQBQAHIAbwBwAGUAcgB0AHkAIAAtAFAAYQB0AGgAIAAoAEoAbwBpAG4ALQBQAGEAdABoACAAJABzAGMAcgBpAHAAdAAuAFAAUwBQAGEAdABoACAALQBDAGgAaQBsAGQAUABhAHQAaAAgACIAUgBlAHMAdQBsAHQAIgApACAALQBOAGEAbQBlACAAIgBSAGUAcwB1AGwAdAAiACkALgBSAGUAcwB1AGwAdAAgAHwAIABjAG8AbgB2AGUAcgB0AGYAcgBvAG0ALQBqAHMAbwBuACkACgAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgAGkAZgAoACQAagBzAG8AbgAuAFAAbwBzAHQAUgBlAG0AZQBkAGkAYQB0AGkAbwBuAEQAZQB0AGUAYwB0AFMAYwByAGkAcAB0AE8AdQB0AHAAdQB0AC4AUwB0AGEAcgB0AHMAVwBpAHQAaAAoACIATABlAGEAbgBMAEEAUABTACIAKQApAHsACgAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAJABqAHMAbwBuAC4AUABvAHMAdABSAGUAbQBlAGQAaQBhAHQAaQBvAG4ARABlAHQAZQBjAHQAUwBjAHIAaQBwAHQATwB1AHQAcAB1AHQAIAA9ACAAIgBSAEUARABBAEMAVABFAEQAIgAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIABTAGUAdAAtAEkAdABlAG0AUAByAG8AcABlAHIAdAB5ACAALQBQAGEAdABoACAAKABKAG8AaQBuAC0AUABhAHQAaAAgACQAcwBjAHIAaQBwAHQALgBQAFMAUABhAHQAaAAgAC0AQwBoAGkAbABkAFAAYQB0AGgAIAAiAFIAZQBzAHUAbAB0ACIAKQAgAC0ATgBhAG0AZQAgACIAUgBlAHMAdQBsAHQAIgAgAC0AVgBhAGwAdQBlACAAKAAkAGoAcwBvAG4AIAB8ACAAQwBvAG4AdgBlAHIAdABUAG8ALQBKAHMAbwBuACAALQBEAGUAcAB0AGgAIAAxADAAIAAtAEMAbwBtAHAAcgBlAHMAcwApACAALQBGAG8AcgBjAGUAIAAtAEMAbwBuAGYAaQByAG0AOgAkAEYAYQBsAHMAZQAKACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIABXAHIAaQB0AGUALQBDAHUAcwB0AG8AbQBFAHYAZQBuAHQATABvAGcAIAAiAHIAZQBkAGEAYwB0AGUAZAAgAGEAbABsACAAbABvAGMAYQBsACAAZABhAHQAYQAiAAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAAgACAAIAB9AAoAIAAgACAAIAAgACAAIAAgACAAIAAgACAAfQAKACAAIAAgACAAIAAgACAAIAB9AAoAIAAgACAAIAB9AGMAYQB0AGMAaAB7ACQATgB1AGwAbAB9AAoAfQA=" #base64 UTF16-LE encoded command https://www.base64encode.org/
+            $null = Register-ScheduledTask -TaskName "leanLAPS_WL" -Trigger $triggers -User "SYSTEM" -Action $Action -Force
         }
+        $JsonString = [PSCustomObject]@{
+            Username       = $localAdminName
+            SecurePassword = $pwd
+            Date           = Get-Date
+        } | ConvertTo-Json -Compress
+        Write-Host $JsonString
 
-        Write-Output "LeanLAPS current password: $pwd for $($localAdminName), last changed on $(Get-Date)"
+        #Write-Output "LeanLAPS current password: $pwd for $($localAdminName), last changed on $(Get-Date)"
         Exit 0
     }
 }
@@ -208,14 +218,22 @@ try {
     $administratorsGroupName = (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]).Value.Split("\")[1]
     Write-CustomEventLog "Local administrators group is named $administratorsGroupName"
     $group = [ADSI]::new("WinNT://$($env:COMPUTERNAME)/$($administratorsGroupName),Group")
-    $administrators = $group.Invoke('Members') | ForEach-Object { (New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList @([Byte[]](([ADSI]$_).properties.objectSid).Value, 0)).Value}
+    $administrators = $group.Invoke('Members') | ForEach-Object { (New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList @([Byte[]](([ADSI]$_).properties.objectSid).Value, 0)).Value }
 
     Write-CustomEventLog "There are $($administrators.count) readable accounts in $administratorsGroupName"
 
     if (!$administrators -or $administrators -notcontains $localAdmin.SID.Value) {
         Write-CustomEventLog "$localAdminName is not a local administrator, adding..."
-        $res = Add-LocalGroupMember -Group $administratorsGroupName -Member $localAdminName -Confirm:$False -ErrorAction Stop
+        $null = Add-LocalGroupMember -Group $administratorsGroupName -Member $localAdminName -Confirm:$False -ErrorAction Stop
         Write-CustomEventLog "Added $localAdminName to the local administrators group"
+    }
+
+    #Enable leanLAPS account if it is disabled
+    if ($autoEnableLocalAdmin) {
+        if (!(Get-LocalUser -SID $localAdmin.SID.Value).Enabled) {
+            $null = Enable-LocalUser -SID $localAdmin.SID.Value -Confirm:$false
+            Write-CustomEventLog "Enabled $($localAdminName) because it was disabled and `$autoEnableLocalAdmin is set to `$True"
+        }
     }
 
     # Disable built in admin account if specified
@@ -223,12 +241,12 @@ try {
         if ($administrator.EndsWith("-500")) {
             if ($disableBuiltinAdminAccount) {
                 if ((Get-LocalUser -SID $administrator).Enabled) {
-                    $res = Disable-LocalUser -SID $administrator -Confirm:$False
+                    $null = Disable-LocalUser -SID $administrator -Confirm:$false
                     Write-CustomEventLog "Disabled $($administrator) because it is a built-in account and `$disableBuiltinAdminAccount is set to `$True"
                 }
             }
         }
-       }
+    }
 
     # Remove other local admins if specified, only executes if adding the new local admin succeeded
     if ($removeOtherLocalAdmins) {
@@ -239,11 +257,11 @@ try {
             }
             if ($administrator -ne $localAdmin.SID.Value -and $approvedAdmins -notcontains $administrator) {
                 Write-CustomEventLog "removeOtherLocalAdmins set to True, removing $($administrator) from Local Administrators"
-                $res = Remove-LocalGroupMember -Group $administratorsGroupName -Member $administrator -Confirm:$False
+                $null = Remove-LocalGroupMember -Group $administratorsGroupName -Member $administrator -Confirm:$False
                 Write-CustomEventLog "Removed $administrator from Local Administrators"
             }
             else {
-                Write-CustomEventLog "$($administrator) allowlisted and not removed"
+                Write-CustomEventLog "$($administrator) allowListed and not removed"
             }
         }
     }
@@ -264,12 +282,12 @@ if (!$pwdSet) {
         $newPwdSecStr = ConvertTo-SecureString $newPwd -AsPlainText -Force
         $pwdSet = $true
 
-        $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true -ErrorAction SilentlyContinue
+        $null = $localAdmin | Set-LocalUser -Password $newPwdSecStr -Confirm:$false -AccountNeverExpires -PasswordNeverExpires $true -UserMayChangePassword $true -ErrorAction SilentlyContinue
         # Temporary: If Set-LocalUser fails, set password using ADSI, this should also ensure that Set-LocalUser works next time.
         $LocalDirectory = [ADSI]::new(('WinNT://{0}' -f $env:COMPUTERNAME))
         $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword', $NewPwd)
 
-        Write-CustomEventLog "Password for $localAdminName set to a new value, see MEM"
+        Write-CustomEventLog "Password for $localAdminName set to a new value, see MDE"
     }
     catch {
         Write-CustomEventLog "Failed to set new password for $localAdminName"
@@ -278,6 +296,6 @@ if (!$pwdSet) {
     }
 }
 
-Write-Host "LeanLAPS ran successfully for $($localAdminName)"
-$res = Set-Content -Path $markerFile -Value (ConvertFrom-SecureString $newPwdSecStr) -Force -Confirm:$false
+Write-Host "LeanLAPS ran successfully for $($localAdminName) on $(Get-Date)"
+$null = Set-Content -Path $markerFile -Value (ConvertFrom-SecureString $newPwdSecStr) -Force -Confirm:$false
 exit 1

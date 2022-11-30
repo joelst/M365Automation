@@ -144,7 +144,20 @@ foreach ($info in $packageInfo) {
         Write-Verbose "  InfomationUrl = $InformationUrl"
     }
 }
-    
+
+if ([string]::IsNullOrWhiteSpace($InformationURL)){
+    $InformationUrl = "https://bing.com/$packageName"
+}
+
+if ([string]::IsNullOrWhiteSpace($PublisherURL)){
+    $PublisherUrl = "https://bing.com/$packageName"
+}
+
+if ([string]::IsNullOrWhiteSpace($PrivacyURL)){
+    $PrivacyUrl = "https://bing.com/$packageName"
+}
+
+
 # Variables for the package
 $DisplayName = $PackageName ##+ " " + $PackageVersion
 
@@ -287,8 +300,8 @@ if ($PackageName) {
         $DetectionRules += $DetectionRule1
     }
     else {
-        Write-Information -ForegroundColor "Cyan" "ProductCode: $ProductCode."
-        Write-Information -ForegroundColor "Cyan" "Version: $PackageVersion."
+        Write-Information "ProductCode: $ProductCode."
+        Write-Information "Version: $PackageVersion."
         Write-Warning -Message "Cannot create the detection rule - check ProductCode and version number."
 
     }
