@@ -64,7 +64,7 @@ foreach ($script in $scripts) {
     
 }
 
-if ($null -ne $global:createdPackage) {
+if ($global:createdPackage.count -gt 0) {
     Write-Host "Created..."
     
     foreach ($l in $global:createdPackage)

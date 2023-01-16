@@ -55,6 +55,9 @@ Param (
     [Parameter(Mandatory = $False)]
     $MinimumSupportedOperatingSystem = "21H1",
 
+    [Parameter(Mandatory = $False)]
+    $VersionOperator = "Equal",
+
     [switch]$Force
 
     
@@ -297,7 +300,7 @@ $packageInfo = winget show $PackageId
         If ($ProductCode -and $PackageVersion) {
             $params = @{
                 ProductCode = $ProductCode
-                #ProductVersionOperator = "greaterThanOrEqual"
+                #ProductVersionOperator = $VersionOperator
                 #ProductVersion         = $PackageVersion
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
@@ -314,7 +317,7 @@ $packageInfo = winget show $PackageId
                 Path                 = $AppPath
                 FileOrFolder         = $AppExecutable
                 Check32BitOn64System = $False 
-                Operator             = "greaterThanOrEqual"
+                Operator             = $VersionOperator
                 VersionValue         = $PackageVersion
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
