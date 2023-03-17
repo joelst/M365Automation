@@ -74,5 +74,5 @@ if ($global:createdPackage.count -gt 0) {
 
 }
 else {
-    Write-Host "No packages created..."
+    Write-Host "`n`tNo packages created...`n"
 }

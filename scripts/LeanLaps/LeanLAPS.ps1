@@ -153,7 +153,7 @@ Write-CustomEventLog "LeanLAPS starting on $($ENV:COMPUTERNAME) as $($MyInvocati
 
 if ($doNotRunOnServers -and (Get-CimInstance -Class Win32_OperatingSystem).ProductType -ne 1) {
     Write-CustomEventLog "Unsupported OS!"
-    Write-Error "Unsupported OS!"
+    Write-Warning "Unsupported OS!"
     Exit 0
 }
 

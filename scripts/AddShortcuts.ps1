@@ -104,7 +104,8 @@ $programs = @{
 }
 
 $LogFileName = [string]::Format("ShortcutRepairs{0}.log", (Get-Random -Minimum 0 -Maximum 99))
-$LogFilePath = "$env:temp\$LogFileName";
+$LogFilePath = "$env:temp\$LogFileName"
+$ForceRepair
 
 function Write-LogMessage {
     param($message,
@@ -131,7 +132,6 @@ function Write-LogMessage {
         $outputstring | Out-File $LogFilepath -Append;
     }
 }
-
 
 function Get-PSVersion {
     if ($PSVersionTable.PSVersion -like '7*') {
@@ -302,7 +302,6 @@ function Mount-VolumeShadowCopy {
     End {}
 }
 
-
 function Dismount-VolumeShadowCopy {
     <#
     .SYNOPSIS
@@ -368,7 +367,7 @@ trap {
     exit
 }
 
-function GetTimeRangeOfVersion {
+function Get-TimeRangeOfVersion {
 
     $versions = "1.381.2140.0", "1.381.2152.0", "1.381.2160.0"
 
@@ -655,7 +654,7 @@ function Get-HKUAppsFixLinks($programslist) {
                         $target = $target.Trim("`"")
                         $shortcut_path = "$profile_path\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\$($_.Key).lnk"
                         $description = $_.Key
-                        $workingdirectory = (Get-ChildItem $target).DirectoryName
+                        $workingdirectory = (Get-ChildItem $target -ErrorAction SilentlyContinue).DirectoryName
                         $WshShell = New-Object -ComObject WScript.Shell
                         $Shortcut = $WshShell.CreateShortcut($shortcut_path)
                         $Shortcut.TargetPath = $target
@@ -693,8 +692,8 @@ if (!($p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
 # Is Machine Affected Check, continue if $ForceRepair is true
-$events_time = GetTimeRangeOfVersion
-if (-Not ($ForceRepair -or ($null -ne $events_time))) {
+$eventsTime = Get-TimeRangeOfVersion
+if (-Not ($ForceRepair -or ($null -ne $eventsTime))) {
     Write-LogMessage -type "console" -message "[+] Machine didnt get affected, if repair is still needed, please run script again with parameter -ForceRepair"
     exit
 }
@@ -708,7 +707,7 @@ else {
 $VssRecoveredLnks = 0
 if ($VssRecovery) {
     try {
-        $VssRecoveredLnks = VssFileRecovery($events_time)
+        $VssRecoveredLnks = VssFileRecovery($eventsTime)
     }
     catch {
         Write-LogMessage -type "error" -message "[!] VSSRecovery failed!"

@@ -38,8 +38,8 @@ Param (
     $PackageId = "Microsoft.PowerShell",
     
     [Parameter(Mandatory = $False)]
-    $ProductCode = "{C4F0686B-5B68-4E8C-B2D7-89B6ECEDDC61}",
-    
+    $ProductCode = "{8E26535E-5F2C-448D-BB9D-447474DAC463}",
+    #PackageCode {476A2393-066F-4722-AEB0-2BA7FA92E922}
     [Parameter(Mandatory = $False)]
     [ValidateSet("System","User")]
     $InstallExperience = "System",

@@ -103,6 +103,7 @@ function Set-RegInfo {
         New-Item -Path $RegistryPath -Force | Out-Null
     }
     # Now set the value
+    Get-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType $Type -Force
     $null = New-ItemProperty -Path $RegistryPath -Name $Name -Value $Value -PropertyType $Type -Force
 }
 

@@ -533,13 +533,13 @@ if ($Manufacturer -match "Dell") {
                             }
                         
                         }
+                        else {
+                            # Needs remediation
+                            New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required | $(Get-Date)" -Type 1 -LogFile $LogFile
+                            $Compliance = $false
+                        }
+                    }
 
-                    }
-                    else {
-                        # Needs remediation
-                        New-CMTraceLog -Message "Update available for $($DellItem.Name.Display.'#cdata-section'): Installed = $CurrentVersion | Available = $DCUVersion | Remediation Required | $(Get-Date)" -Type 1 -LogFile $LogFile
-                        $Compliance = $false
-                    }
             
                 }
                 else {

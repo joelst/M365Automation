@@ -53,7 +53,6 @@ function Get-EdgeVersion {
     
 }
 
-
 $mode = $MyInvocation.MyCommand.Name.Split(".")[0]
 
 if ($mode -eq "detect") {
