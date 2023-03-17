@@ -1,7 +1,7 @@
 #Requires -Module ExchangeOnlineManagement, Microsoft.Graph.Groups
 <#
     .SYNOPSIS
-        Updates delegates based on group membership. Group can be AAD or a Distribution group.
+    Updates delegates based on group membership. Group can be AAD or a Distribution group.
  
     .DESCRIPTION
     
