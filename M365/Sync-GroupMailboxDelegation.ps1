@@ -1,10 +1,12 @@
 #Requires -Module ExchangeOnlineManagement, Microsoft.Graph.Groups
 <#
     .SYNOPSIS
-    Updates delegates based on group membership. Group can be AAD or a Distribution group.
+    You can assign a group as a mailbox delegate to allow all users delegate access to the mailbox. However, when a group is assigned,
+    Outlook for Windows users will not get these delegate mailboxes automapped. The user must manually add the mailbox to their Outlook profile.
+    If users are accessing mail using Outlook for web or Mac, automapping is not supported, so you can simply assign a group delegated permissions.
  
     .DESCRIPTION
-    
+    This script will add and remove delegates to an Exchange Online mailbox. Specify the group name and the mailbox for which to provide access.
 
     .PARAMETER Group
     The Azure AD Group or Distribution group members to apply permissions
