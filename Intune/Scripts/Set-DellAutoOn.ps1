@@ -66,6 +66,7 @@ if ((Test-Path -Path "C:\program files (x86)\Dell\Command Configure\X86_64\cctk.
 
 Remove-Item -Path "C:\Users\Public\Desktop\Dell Command Configure Wizard.lnk" -Force -ErrorAction SilentlyContinue
 Write-Output "$(Get-Date) Configuring auto start settings for computer."
-& 'C:\program files (x86)\Dell\Command Configure\X86_64\cctk.exe' --AutoOn=everyday --AutoOnHr=05 --AutoOnMn=35 --AcPwrRcvry=On
+Set-Location 'C:\program files (x86)\Dell\Command Configure\X86_64\'
+& .\cctk.exe --AutoOn=everyday --AutoOnHr=19 --AutoOnMn=35 --AcPwrRcvry=On
 
 exit 0
