@@ -105,7 +105,7 @@ else {
         
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
             Write-Output " $ProcessName running, closing to update"
-            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+           # Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
         }
         else {
             Write-Output " $ProcessName not running, updating"

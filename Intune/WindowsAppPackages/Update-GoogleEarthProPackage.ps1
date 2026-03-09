@@ -58,7 +58,7 @@ Param (
     $SupplementalInstallCmd = "",
 
     [Parameter(Mandatory = $False)]
-    $MinimumSupportedOperatingSystem = "21H1",
+    $MinimumSupportedOperatingSystem = "W11_21H2",
 
     [Parameter(Mandatory = $False)]
     $VersionOperator = "Equal",

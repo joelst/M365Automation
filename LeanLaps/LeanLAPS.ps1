@@ -15,14 +15,15 @@
     Customization by:   Joel Stidley https://github.com/joelst/
         - Updated password generator to remove commonly confused characters, like i,l,1,0, and O
         - Added Set-LocalUser try/catch if there are errors using ADSI password set option.
-        - Updated 11/30/2022
+        - Changes from upstream merged 4/17/2023
+        - Updated 4/17/2023
 #>
 [CmdletBinding()]
 param (
     $minimumPasswordLength = 21,
-    $publicEncryptionKey = "", # If you supply a public encryption key, LeanLAPS will use this to encrypt the password, ensuring it will only be in encrypted in Proactive Remediation
+    $publicEncryptionKey = "", # If you supply a public encryption key, LeanLAPS will use this to encrypt the password in Proactive Remediation
     $localAdminName = "LocalAdmin",
-    $autoEnableLocalAdmin = $false, #if for some reason the admin account this script creates becomes disabled, leanLAPS will re-enable it
+    $autoEnableLocalAdmin = $false, #if the admin account this script creates becomes disabled, leanLAPS will re-enable it
     $removeOtherLocalAdmins = $true, # Removes ALL other local admins, including those set through AzureAD device settings
     $disableBuiltinAdminAccount = $true, # Disables the built in admin account (which cannot be removed). Usually not needed as most OOBE setups have already done this
     $doNotRunOnServers = $true, # Built-in protection in case an admin accidentally assigns this script to e.g. a domain controller
@@ -60,7 +61,7 @@ function Get-NewPassword {
         #
         # Specifies the total length of password to generate
 
-        [int]$SpecialChars = 4
+        [int]$SpecialChars = 3
         # (REQUIRED)
         #
         # Specifies the number of special characters to include in the generated password.
@@ -237,9 +238,10 @@ try {
     }
 
     # Disable built in admin account if specified
-    foreach ($administrator in $administrators) {
-        if ($administrator.EndsWith("-500")) {
-            if ($disableBuiltinAdminAccount) {
+    if ($disableBuiltinAdminAccount) {
+        foreach ($administrator in $administrators) {
+            if ($administrator.EndsWith("-500")) {
+            
                 if ((Get-LocalUser -SID $administrator).Enabled) {
                     $null = Disable-LocalUser -SID $administrator -Confirm:$false
                     Write-CustomEventLog "Disabled $($administrator) because it is a built-in account and `$disableBuiltinAdminAccount is set to `$True"
@@ -287,7 +289,7 @@ if (!$pwdSet) {
         $LocalDirectory = [ADSI]::new(('WinNT://{0}' -f $env:COMPUTERNAME))
         $LocalDirectory.'Children'.Find($LocalAdminName).Invoke('SetPassword', $NewPwd)
 
-        Write-CustomEventLog "Password for $localAdminName set to a new value, see MDE"
+        Write-CustomEventLog "Password for $localAdminName set to a new value, see Intune logs"
     }
     catch {
         Write-CustomEventLog "Failed to set new password for $localAdminName"

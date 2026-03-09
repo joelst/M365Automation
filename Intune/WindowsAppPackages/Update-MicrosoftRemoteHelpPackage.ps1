@@ -34,7 +34,7 @@ Param (
     [Parameter(Mandatory = $False)]
     $PackageName = "Microsoft Remote Help",
     
-    [Parameter(Mandatory = $False)]
+    [Parameter(Mandatory = $False)] 
     $PackageId = "Microsoft.RemoteHelp",
     
     [Parameter(Mandatory = $False)]
@@ -48,12 +48,12 @@ Param (
     $AppPath = "${env:ProgramFiles}\Remote help\",
     
     [Parameter(Mandatory = $False)]
-    $AppExecutable = "RemoteHelp.exe",
+    $AppExecutable = "RemoteHelpInstaller.exe",
 
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [Parameter(Mandatory = $False)]
-    $MinimumSupportedOperatingSystem = "21H1",
+    $MinimumSupportedOperatingSystem = "W11_21H2",
 
     [Parameter(Mandatory = $False)]
     $VersionOperator = "Equal",
@@ -163,15 +163,26 @@ $packageInfo = winget show $PackageId
         $PrivacyUrl = "https://bing.com/$packageName"
     }
 
+    if ([string]::IsNullOrWhiteSpace($DownloadUrl)){
+        $DownloadUrl = "https://aka.ms/downloadremotehelp"
+    }
+
     # Variables for the package
     $DisplayName = $PackageName ##+ " " + $PackageVersion
 
     Write-Output "`n  Creating Package: $DisplayName"
     $Executable = Split-Path -Path $DownloadUrl -Leaf
 
-    $InstallCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe install --id $PackageId --silent --accept-package-agreements --accept-source-agreements`""
-    $UninstallCommandLine = ".\$Executable /silent /norestart /uninstall"
+    if ($Executable.Contains('.') -eq $false){
+        $Executable = "$Executable.exe"
+    }
+    
+    $InstallCommandLine = ".\remotehelpinstaller.exe /quiet acceptTerms=1"
+    $UninstallCommandLine = ".\remotehelpinstaller.exe /uninstall /quiet acceptTerms=1"
     #To_Automate region
+    if ([string]::IsNullOrWhiteSpace($PackageVersion)){
+        $PackageVersion = "1"
+    }
 
 #endregion
     Write-Host "    Checking to see if $PackageName $PackageVersion has already been created in MEM..."
@@ -221,7 +232,12 @@ $packageInfo = winget show $PackageId
         # Download the Package
         # TODO - Check the hash to make sure the file is valid
         Write-Verbose "  Executing: Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)"
-        $packageFile = Join-Path -Path $Path -ChildPath (Split-Path -Path $DownloadUrl -Leaf)
+        $packageFile = Join-Path -Path $Path -ChildPath "remotehelpinstaller.exe"
+
+        #if ($packagefile.Contains(".") -eq $false) {
+         #   $packageFile = 
+        #}
+
         try {
             Invoke-WebRequest -Uri $DownloadUrl -OutFile $packageFile -UseBasicParsing
         }
@@ -229,6 +245,8 @@ $packageInfo = winget show $PackageId
             Write-Error -Message "Package download error: $($_.Exception.Message)"
             Break
         }
+
+        $PackageVersion = (Get-Item $packageFile).VersionInfo.ProductVersion
 
         #region Package the app
         # Download the Intune Win32 wrapper
@@ -295,21 +313,21 @@ $packageInfo = winget show $PackageId
         }
 
         # Create detection rule using the en-US MSI product code (1033 in the GUID below correlates to the lcid)
-        If ($ProductCode -and $PackageVersion) {
+        if ([string]::IsNullOrWhiteSpace($ProductCode) -eq $false -and [string]::IsNullOrWhiteSpace($PackageVersion) -eq $false) {
             $params = @{
                 ProductCode = $ProductCode
                 #ProductVersionOperator = $VersionOperator
-                #ProductVersion         = $PackageVersion
+                ProductVersion         = $PackageVersion
             }
             $DetectionRule1 = New-IntuneWin32AppDetectionRuleMSI @params
         }
-        Else {
+        else {
             Write-Host -ForegroundColor "Cyan" "ProductCode: $ProductCode."
             Write-Host -ForegroundColor "Cyan" "Version: $PackageVersion."
             Write-Error -Message "Cannot create the detection rule - check ProductCode and version number."
-            Break
+            #Break
         }
-        If ($AppPath -and $AppExecutable) {
+        if ($AppPath -and $AppExecutable) {
             $params = @{
                 Version              = $True
                 Path                 = $AppPath
@@ -320,7 +338,7 @@ $packageInfo = winget show $PackageId
             }
             $DetectionRule2 = New-IntuneWin32AppDetectionRuleFile @params
         }
-        Else {
+        else {
             Write-Error -Message "Cannot create the detection rule - check application path and executable."
             Write-Host -ForegroundColor "Cyan" "Path: $AppPath."
             Write-Host -ForegroundColor "Cyan" "Exe: $AppExecutable."

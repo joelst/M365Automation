@@ -55,7 +55,7 @@ Param (
     $SupplementalInstallCmd = "zNoDesktopShortCut=1 ZoomAutoUpdate=True zRecommend='AudioAutoAdjust=1'",
 
     [Parameter(Mandatory = $False)]
-    $MinimumSupportedOperatingSystem = "21H1",
+    $MinimumSupportedOperatingSystem = "W11_21H2",
 
     [Parameter(Mandatory = $False)]
     $VersionOperator = "Equal",
@@ -378,7 +378,7 @@ $packageInfo = winget show $PackageId
                     $params = @{
                         Id                           = $App.Id
                         Intent                       = "available"
-                        Notification                 = "none"
+                        Notification                 = "hideAll"
                         DeliveryOptimizationPriority = "foreground"
                         #AvailableTime                = ""
                         #DeadlineTime                 = ""

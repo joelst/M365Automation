@@ -4,8 +4,9 @@
 $remediationScriptID = "00000000-0000-0000-0000-000000000000" #To get this ID, go to graph explorer https://developer.microsoft.com/en-us/graph/graph-explorer and use this query https://graph.microsoft.com/beta/deviceManagement/deviceHealthScripts to get all remediation scripts in your tenant and select your script id
 $ErrorActionPreference = "Stop"
 $privateKey = "" #if you supply a private key, this will be used to decrypt the password (assuming it was encrypting using your public key, as configured in leanLAPS.ps1
+$showLocalDateTime = $False #password change times are in UTC, if you wish to show whatever timezone is detected on the local device, set this to $True
 
-Function ConnectMSGraphModule {
+function ConnectMSGraphModule {
 
 	Try { Import-Module -Name Microsoft.Graph.Intune }
 	Catch { 
@@ -21,10 +22,21 @@ Function ConnectMSGraphModule {
 
     Connect-MSGraph
 }
-        
+
+function Convert-UTCtoLocal{ 
+    #credits/source: https://devblogs.microsoft.com/scripting/powertip-convert-from-utc-to-my-local-time-zone/
+    param( 
+        [parameter(Mandatory=$true)][String]$UTCTime 
+    )
+    $strCurrentTimeZone = (Get-WmiObject win32_timezone).StandardName 
+    $TZ = [System.TimeZoneInfo]::FindSystemTimeZoneById($strCurrentTimeZone) 
+    $LocalTime = [System.TimeZoneInfo]::ConvertTimeFromUtc($UTCTime, $TZ)
+    return $LocalTime 
+}
+     
 function Get-DeviceInfo {
         
-    If($inputBox.Text -ne 'Device Name') {
+    if ($inputBox.Text -ne 'Device Name') {
 			
             $outputBox.text =  "Gathering leanLAPS and Device Information for " + $inputBox.text + " - Please wait...."  | Out-String
         
@@ -83,6 +95,11 @@ function Get-DeviceInfo {
                     $decrypted = $rsa.Decrypt([byte[]]($laps -split " "), $false)
                     $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password" -Value ([System.Text.Encoding]::UTF8.GetString($decrypted))
                 }
+
+                if($showLocalDateTime){
+                    $lastchanged = Convert-UTCtoLocal -UTCTime $lastChanged
+                }
+
 			    $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Password Changed" -Value $lastChanged
                 $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "Device Name" -Value $deviceName
                 $deviceInfoDisplay | Add-Member -MemberType NoteProperty -Name "User" -Value $userSignedIn

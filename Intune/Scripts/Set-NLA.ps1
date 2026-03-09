@@ -1,0 +1,1 @@
+Set-NetworkLevelAuthentication -EnableNLA $true

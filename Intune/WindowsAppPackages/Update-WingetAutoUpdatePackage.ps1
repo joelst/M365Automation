@@ -2,11 +2,11 @@
 <#
     .SYNOPSIS
         Packages the latest 1Password for MEM (Intune) deployment.
-        Uploads the mew package into the target Intune tenant.
+        Uploads the new package into the target Intune tenant.
 
     .NOTES
         For details on IntuneWin32App go here: https://github.com/MSEndpointMgr/IntuneWin32App/blob/master/README.md
-    
+
     .PARAMETER Path
     Path to use for downloading and processing packages
 
@@ -18,7 +18,7 @@
 
     .EXAMPLE
     .\Update-1PasswordPackage.ps1 -Upload
-    
+
     This will create a new package using the default values
 
 #>
@@ -38,35 +38,35 @@ Param (
 
     [Parameter(Mandatory = $False)]
     $PackageName = "1Password",
-    
+
     [Parameter(Mandatory = $False)]
     $PackageId = "AgileBits.1Password",
-    
+
     [Parameter(Mandatory = $False)]
     $ProductCode = "",
-    
+
     [Parameter(Mandatory = $False)]
     [ValidateSet("System", "User")]
     $InstallExperience = "User",
-    
+
     [Parameter(Mandatory = $False)]
     $AppPath = "%LocalAppData%\1Password\app\8\",
-    
+
     [Parameter(Mandatory = $False)]
     $AppExecutable = "1Password.exe",
 
     $IconSource = "https://raw.githubusercontent.com/joelst/MEMAppFactory/main/logos/$($PackageId)-logo.png",
 
     [Parameter(Mandatory = $False)]
-    $MinimumSupportedOperatingSystem = "21H1",
+    $MinimumSupportedOperatingSystem = "W11_21H2",
 
     [Parameter(Mandatory = $False)]
     $VersionOperator = "Equal",
 
     [switch]$Force
-    
+
 )
-    
+
 $Win32Wrapper = "https://raw.githubusercontent.com/microsoft/Microsoft-Win32-Content-Prep-Tool/master/IntuneWinAppUtil.exe"
 
 #Create subfolders for this package
@@ -83,19 +83,19 @@ if ($Null -ne $Global:AccessToken) {
 
     if ($TokenExpireMins -le 1) {
         Write-Host -ForegroundColor "Cyan" "Existing token found but is or will soon expire, requesting a new token."
-        
+
         $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
         #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName
     }
     else {
         Write-Host -ForegroundColor "Cyan" "Existing authentication token has not expired, will not request a new token."
-    }        
+    }
 }
 else {
     Write-Host -ForegroundColor "Cyan" "Authentication token does not exist, requesting a new token."
     $Global:AccessToken = Connect-MSIntuneGraph -TenantID $TenantName
     #$Global:AccessToken = Get-MSIntuneAuthToken -TenantName $TenantName -PromptBehavior "Auto"
-    
+
 }
 #endregion
 
@@ -104,16 +104,16 @@ Write-Host -ForegroundColor "Cyan" "Getting $PackageName updates via Winget."
 $ProgressPreference = "SilentlyContinue"
 $InformationPreference = "Continue"
 
-$packageInfo = winget show $PackageId 
+$packageInfo = winget show $PackageId
 foreach ($info in $packageInfo) {
-    try { 
+    try {
         $key = ($info -split ": ")[0].Trim()
         $value = ($info -split ": ")[1].Trim()
     }
     catch {
         # just ignore the error
     }
-        
+
     if ($key -eq "Version") {
         $PackageVersion = $value
         Write-Verbose "  PackageVersion = $PackageVersion"
@@ -165,7 +165,7 @@ if ([string]::IsNullOrWhiteSpace($PrivacyURL)){
 $DisplayName = $PackageName ##+ " " + $PackageVersion
 
 Write-Output "`n  Creating Package: $DisplayName"
-$Executable = Split-Path -Path $DownloadUrl -Leaf
+$executable = Split-Path -Path $DownloadUrl -Leaf
 
 $InstallCommandLine = '"%systemroot%\sysnative\WindowsPowerShell\v1.0\powershell.exe" -noprofile -executionpolicy bypass -file "Winget-AutoUpdate-Install.ps1" -Silent"'
 #$UpgradeCommandLine = "cmd /c `"pushd `"%ProgramW6432%\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe`" && winget.exe upgrade --id $PackageId --silent --accept-package-agreements --accept-source-agreements"
@@ -195,7 +195,7 @@ else {
 
 # Download installer with winget
 if ($PackageName) {
- 
+
     # Test to make sure the paths we need are available.
     if ((Test-Path $path -ErrorAction SilentlyContinue) -ne $true) {
         $null = New-Item -Path $path -ErrorAction SilentlyContinue -ItemType Directory | Out-Null
@@ -213,7 +213,7 @@ if ($PackageName) {
     Write-Host -ForegroundColor "Cyan" "    Output path: $PackageOutputPath"
 
     #region Download files and setup the package
-   
+
     #region Package the app
     # Download the Package
     # TODO - Check the hash to make sure the file is valid
@@ -247,7 +247,7 @@ if ($PackageName) {
     Write-Host "  Argument list: $ArgList"
 
     try {
-           
+
         $params = @{
             FilePath     = $wrapperBin
             ArgumentList = $ArgList
@@ -314,7 +314,7 @@ if ($PackageName) {
             Version              = $True
             Path                 = $AppPath
             FileOrFolder         = $AppExecutable
-            Check32BitOn64System = $False 
+            Check32BitOn64System = $False
             Operator             = "Equal"
             VersionValue         = $PackageVersion
         }
@@ -335,7 +335,7 @@ if ($PackageName) {
     #     Write-Error -Message "Failed to create the detection rule."
     #     Break
     # }
-    
+
     # Create custom requirement rule
     $params = @{
         Architecture                    = "All"
@@ -398,7 +398,7 @@ if ($PackageName) {
                     Break
                 }
             }
-        
+
     }
     else {
         Write-Warning -Message "Parameter -Upload not specified. Skipping upload to MEM."

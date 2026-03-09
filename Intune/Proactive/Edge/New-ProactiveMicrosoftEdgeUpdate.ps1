@@ -104,8 +104,8 @@ else {
     if (Test-Path -Path "C:\Program Files (x86)\Microsoft\EdgeUpdate\MicrosoftEdgeUpdate.exe" ) {
 
         if (Get-Process -Name $ProcessName -ErrorAction SilentlyContinue) {
-            Write-Output " $ProcessName     running, updating and restarting"
-            Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
+            Write-Output " $ProcessName running, updating and restarting"
+            # Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
 
         }
         else {
