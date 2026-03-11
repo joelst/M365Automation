@@ -64,10 +64,6 @@ $WriteLog = {
     }
 }
 
-# ========================================================================
-# SHARED HARDENING CORE - logic below this line is identical in
-# Set-CustomASRRules-Action1.ps1. Keep both files in sync when editing.
-# ========================================================================
 $SetReg = {
     param([string]$Path, [string]$Name, $Value, [string]$Type)
     $Type = $Type.Replace('REG_', '')
@@ -78,9 +74,7 @@ $SetReg = {
 
 & $WriteLog -Type 'INFO' -Msg "Starting security hardening (ActionType=$ActionType, Overwrite=$Overwrite)"
 
-# ========================================================================
 # SECTION 1: DEFENDER - ASR RULES & PROTECTION SETTINGS
-# ========================================================================
 
 $defenderAvailable = [bool]((Get-Command -Name 'Get-MpPreference' -ErrorAction SilentlyContinue) -and (Get-Command -Name 'Set-MpPreference' -ErrorAction SilentlyContinue))
 
@@ -180,9 +174,9 @@ else {
     & $WriteLog -Type 'WARNING' -Msg 'Defender cmdlets not available - skipping ASR and protection settings'
 }
 
-# ========================================================================
+
 # SECTION 2: REGISTRY HARDENING
-# ========================================================================
+
 
 & $WriteLog -Type 'INFO' -Msg 'Applying registry hardening settings...'
 
@@ -202,6 +196,7 @@ else {
 & $SetReg -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name 'NoAutoRun' -Value 1 -Type 'DWORD'
 # CIS 18.9.8.3 "Turn off Autoplay for non-volume devices = Enabled" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'NoAutoplayfornonVolume' -Value 1 -Type 'DWORD'
+
 # UAC settings
 # CIS 18.9.16.2 "Do not display network selection UI = Enabled" / Enumerate admin accounts (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\CredUI' -Name 'EnumerateAdministrators' -Value 0 -Type 'DWORD'
@@ -215,6 +210,7 @@ else {
 & $SetReg -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'EnableLUA' -Value 1 -Type 'DWORD'
 # CIS 2.3.17.6 "UAC: Switch to the secure desktop when prompting for elevation = Enabled" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'PromptOnSecureDesktop' -Value 1 -Type 'DWORD'
+
 # Authentication and network security
 # CIS 2.3.11.7 "Network security: LAN Manager authentication level = Send NTLMv2 only. Refuse LM & NTLM" (L1)
 & $SetReg -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa' -Name 'LmCompatibilityLevel' -Value 5 -Type 'DWORD'
@@ -230,6 +226,7 @@ else {
 & $SetReg -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name 'RequireSecuritySignature' -Value 1 -Type 'DWORD'
 # CIS 2.3.10.8 "Network access: Restrict anonymous access to Named Pipes and Shares = Enabled" (L1)
 & $SetReg -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name 'RestrictNullSessAccess' -Value 1 -Type 'DWORD'
+
 # WinRM security
 # CIS 18.10.89.1.3 "Allow Basic authentication (Client) = Disabled" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Client' -Name 'AllowBasic' -Value 0 -Type 'DWORD'
@@ -249,6 +246,7 @@ else {
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service' -Name 'DisableRunAs' -Value 1 -Type 'DWORD'
 # CIS 18.10.90.1 "Allow Remote Shell Access = Disabled" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WinRM\Service\WinRS' -Name 'AllowRemoteShellAccess' -Value 0 -Type 'DWORD'
+
 # Windows Firewall
 # CIS 9.3.5 "Windows Firewall: Public: Settings: Apply local firewall rules = No" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\WindowsFirewall\PublicProfile' -Name 'AllowLocalPolicyMerge' -Value 0 -Type 'DWORD'
@@ -307,6 +305,7 @@ else {
 & $SetReg -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters' -Name 'NodeType' -Value 2 -Type 'DWORD'
 # Disable LLMNR - CIS 18.6.4.1 "Turn off multicast name resolution = Enabled" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient' -Name 'EnableMulticast' -Value 0 -Type 'DWORD'
+
 # PrintNightmare mitigations
 # CIS 18.7.7 "Point and Print Restrictions: NoWarningNoElevationOnInstall = Disabled (0)" (L1)
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint' -Name 'NoWarningNoElevationOnInstall' -Value 0 -Type 'DWORD'
@@ -328,6 +327,7 @@ else {
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CredUI' -Name 'DisablePasswordReveal' -Value 1 -Type 'DWORD'
 # Early Launch Antimalware - CIS 18.9.13.1 "Boot-Start Driver Initialization Policy = Good and Unknown" (L1)
 & $SetReg -Path 'HKLM:\SYSTEM\CurrentControlSet\Policies\EarlyLaunch' -Name 'DriverLoadPolicy' -Value 8 -Type 'DWORD'
+
 # Data Execution Prevention - CIS 18.3.1 DEP AlwaysOn (L1)
 # NOTE: bcdedit changes alter BCD which can change TPM PCR measurements.
 # If BitLocker is active, we must suspend protectors for one reboot to avoid a recovery key prompt.
@@ -359,9 +359,7 @@ catch {
 & $SetReg -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\System' -Name 'BlockDomainPicturePassword' -Value '1' -Type 'DWORD'
 & $WriteLog -Type 'OK' -Msg 'Registry hardening complete'
 
-# ========================================================================
 # SECTION 3: LOCAL ACCOUNT POLICY
-# ========================================================================
 
 # CIS 1.1.4 (minpwlen 12+), CIS 1.1.3 (minpwage 1+),
 # CIS 1.2.1 (lockout duration 15+), CIS 1.2.2 (lockout threshold 5-10), CIS 1.2.3 (lockout window 15+) (L1)
@@ -369,9 +367,7 @@ catch {
 & net.exe accounts /minpwlen:12 /minpwage:1 /lockoutduration:15 /lockoutthreshold:10 /lockoutwindow:15 | Out-Null
 if ($LASTEXITCODE -eq 0) { & $WriteLog -Type 'OK' -Msg 'Local account policies applied' } else { & $WriteLog -Type 'ERROR' -Msg "net accounts failed with exit code $LASTEXITCODE" }
 
-# ========================================================================
 # SECTION 4: DISABLE POWERSHELL V2
-# ========================================================================
 
 # CIS 18.10.86.1 related; forces scripts through PS 5.1+ with AMSI and script block logging (L1)
 try {
@@ -388,7 +384,7 @@ catch {
     & $WriteLog -Type 'WARNING' -Msg "Could not disable PowerShell v2: $($_.Exception.Message)"
 }
 
-# ========================================================================
+
 & $WriteLog -Type 'SUCCESS' -Msg "All security hardening applied at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 
 exit 0
