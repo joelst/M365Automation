@@ -176,8 +176,8 @@ Full path prefix: `C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Claud
 
 | Group | Win32 Claude | Cowork Remediation |
 |-------|--------------|--------------------|
-| `SG-Claude-Chat-Pilot` | Required | No |
-| `SG-Claude-Cowork-Pilot` | Required (member of chat or direct assign) | Required |
+| Claude chat pilot | Required | No |
+| Claude Cowork pilot | Required (member of chat or direct assign) | Required |
 | VDI / no nested virt | Optional chat only | **Exclude** |
 | Production chat | Expand chat assignment | Still no |
 | Production Cowork | Same MSIX | Expand remediation |

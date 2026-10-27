@@ -7,7 +7,7 @@
         <key>PayloadType</key>
         <string>Configuration</string>
         <key>PayloadOrganization</key>
-        <string>Gecko Green</string>
+        <string>Your Organization</string>
         <!-- Unique GUID, NOT 'com.microsoft.wdav'. Using the preference domain as the
              top-level identifier is what made the two source profiles collide. -->
         <key>PayloadIdentifier</key>
@@ -32,7 +32,7 @@
                 <key>PayloadType</key>
                 <string>com.microsoft.wdav</string>
                 <key>PayloadOrganization</key>
-                <string>Gecko Green</string>
+                <string>Your Organization</string>
                 <key>PayloadIdentifier</key>
                 <string>0C7F66B7-055E-423F-87E3-B8D710A5120D</string>
                 <key>PayloadDisplayName</key>

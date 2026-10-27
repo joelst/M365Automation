@@ -1,20 +1,21 @@
 <#
 .SYNOPSIS
 Phase 1 of macOS 27 (Golden Gate) readiness: creates the version assignment filter and the
-matching compliance policy, following the tenant's existing per-version pattern.
+matching compliance policy, for tenants that scope macOS compliance per major version.
 
 .DESCRIPTION
-macOS 27 "Golden Gate" shipped 14 September 2026. The tenant scopes macOS compliance by
-major version using an assignment filter plus a per-version policy:
+macOS 27 "Golden Gate" shipped 14 September 2026. A common pattern scopes macOS compliance by
+major version using an assignment filter plus a per-version policy, all assigned to one Mac
+device group:
 
-    macOS: Sequoia (15.x)  -> _MacOS Devices + filter macOSSequoiaDevices  (osVersion startsWith "15")
-    macOS: Tahoe (26.x)    -> _MacOS Devices + filter macOSTahoeDevices    (osVersion startsWith "26")
+    macOS: Sequoia (15.x)  -> <Mac group> + filter macOSSequoiaDevices  (osVersion startsWith "15")
+    macOS: Tahoe (26.x)    -> <Mac group> + filter macOSTahoeDevices    (osVersion startsWith "26")
 
-No filter matches "27", so a Mac that takes the 27 upgrade currently falls out of
-version-based compliance entirely and is left with only 'macOS: Base compliance'. This
-script closes that gap by adding the missing tier:
+With no filter matching "27", a Mac that takes the 27 upgrade falls out of version-based
+compliance entirely and is left with only the baseline policy. This script closes that gap
+by adding the missing tier:
 
-    macOS: Golden Gate (27.x) -> _MacOS Devices + filter macOSGoldenGateDevices
+    macOS: Golden Gate (27.x) -> <Mac group> + filter macOSGoldenGateDevices
 
 It does NOT touch the Sequoia or Tahoe policies. Intel Macs cannot run macOS 27 and stay on
 the Tahoe tier, which is why that policy is deliberately left alone.
@@ -24,11 +25,11 @@ duplicated, so it is safe to re-run. Use -WhatIf for a dry run.
 
 .PARAMETER osMinimumVersion
 Minimum macOS 27 build required for compliance. Defaults to '27.0' (the shipping release).
-Raise this as Apple ships patches, the same way the Tahoe tier sits at 26.6.1.
+Raise this as Apple ships patches, the same way you raise the other version tiers.
 
 .PARAMETER targetGroupName
-Entra group the policy is assigned to. Defaults to the group the other macOS version
-policies use.
+Entra group the policy is assigned to -- normally the group the other macOS version policies
+use. Required unless -skipAssignment is set.
 
 .PARAMETER tenantId
 Optional tenant id or domain for authentication.
@@ -38,14 +39,14 @@ Create the filter and policy but do not assign the policy. Use this if you want 
 the policy in the admin center before it reaches any device.
 
 .EXAMPLE
-./New-MacOSGoldenGateCompliance.ps1 -WhatIf
+./New-MacOSGoldenGateCompliance.ps1 -targetGroupName 'All Macs' -WhatIf
 
 Shows exactly what would be created and assigned, without writing anything.
 
 .EXAMPLE
-./New-MacOSGoldenGateCompliance.ps1
+./New-MacOSGoldenGateCompliance.ps1 -targetGroupName 'All Macs'
 
-Creates the filter and policy and assigns the policy to _MacOS Devices.
+Creates the filter and policy and assigns the policy to the 'All Macs' group.
 
 .EXAMPLE
 ./New-MacOSGoldenGateCompliance.ps1 -skipAssignment
@@ -70,7 +71,7 @@ param(
 
   [Parameter()]
   [ValidateNotNullOrEmpty()]
-  [string]$targetGroupName = '_MacOS Devices',
+  [string]$targetGroupName,
 
   [Parameter()]
   [ValidateNotNullOrEmpty()]
@@ -96,6 +97,11 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# Fail before connecting: assigning needs a group, and there is no safe default to guess.
+if (-not $skipAssignment -and -not $targetGroupName) {
+  throw 'Pass -targetGroupName (the group your other macOS version policies use), or -skipAssignment.'
+}
 
 # Names follow the existing tiers exactly; changing them breaks the naming convention the
 # other macOS policies and filters use.

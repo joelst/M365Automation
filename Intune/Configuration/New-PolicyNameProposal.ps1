@@ -94,7 +94,7 @@ param(
   [ValidateNotNullOrEmpty()]
   [string]$Separator = ':',
 
-  # Append the intended audience, e.g. 'macOS: Defender Full Disk Access (_MacOS Devices)'.
+  # Append the intended audience, e.g. 'macOS: Defender Full Disk Access (All Macs)'.
   # Exclusions are left out -- they are assignment detail, not audience.
   # Pass -IncludeTarget:$false to leave it out entirely; see the note in .NOTES about drift.
   [Parameter()]
@@ -633,8 +633,8 @@ function Get-TargetLabel {
     Condense the assignment into something short enough to live inside a name.
 
     Exclusions are deliberately left out: they are an important detail of the assignment but
-    they are not the audience, and 'All devices, EXCLUDE:SG-AllowedClawDevices,
-    EXCLUDE:SG-AllowedClawUsers' does not belong in a policy name. They stay in the
+    they are not the audience, and 'All devices, EXCLUDE:Exempt Devices,
+    EXCLUDE:Exempt Users' does not belong in a policy name. They stay in the
     AssignedTo column.
   #>
   param([string[]]$targets)
@@ -648,7 +648,7 @@ function Get-TargetLabel {
   if ($hasAllDevices -and $includes.Count -eq 1) { return 'All Devices' }
   if ($hasAllUsers -and $includes.Count -eq 1) { return 'All Users' }
 
-  # Group names carry their own prefix conventions (_MacOS Devices, DG-Win11Devices). Keep
+  # Group names carry their own prefix conventions (_Mac Devices, DG-Windows-Devices). Keep
   # them as written -- they are the audience's actual name -- just drop a leading underscore.
   $groups = @($includes | ForEach-Object { ($_ -replace '^_', '') })
   if ($groups.Count -eq 1) { return $groups[0] }

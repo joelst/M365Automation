@@ -23,10 +23,10 @@ function Convert-AzureAdObjectIdToSid {
     return $sid
 }
 
-$objectId = "8227700f-e02b-4eb4-8e9f-52e1f33515ef"
+$objectId = "00000000-0000-0000-0000-000000000000"  # replace with the Entra object id to convert
 $sid = Convert-AzureAdObjectIdToSid -ObjectId $objectId
 Write-Output $sid
 
-# Output:
+# Output (for the all-zero placeholder):
 
-# S-1-12-1-1943430372-1249052806-2496021943-3034400218
+# S-1-12-1-0-0-0-0
