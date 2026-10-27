@@ -1,2 +1,27 @@
-# Auto detect text files and perform LF normalization
+# Line endings are not cosmetic in this repo.
+#
+# The shell scripts here are deployed to macOS by Intune and the pre-commit hook is run by
+# git's own shell. A CR at the end of a shebang line makes the kernel look for an interpreter
+# literally named "/bin/bash\r", which fails as "bad interpreter: no such file or directory" --
+# a confusing error that looks nothing like a line-ending problem. Without these rules, a clone
+# on a machine with core.autocrlf=true silently produces scripts that cannot run.
+#
+# Apple configuration profiles are parsed on macOS, so they get LF for the same reason.
+# PowerShell here is Windows-native and keeps CRLF.
+
 * text=auto
+
+*.sh            text eol=lf
+*.mobileconfig  text eol=lf
+.githooks/*     text eol=lf
+
+*.ps1           text eol=crlf
+*.psm1          text eol=crlf
+*.psd1          text eol=crlf
+
+# Never touched by line-ending conversion.
+*.msix      binary
+*.intunewin binary
+*.exe       binary
+*.png       binary
+*.jpg       binary

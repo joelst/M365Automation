@@ -159,7 +159,7 @@
 
         <!-- Automatic folder redirection (Desktop+Documents) -->
         <key>KFMSilentOptIn</key>
-        <string>21546e07-2132-445d-b21e-9ca36bf847c2</string>
+        <string>YOUR-TENANT-ID</string>
 
         <!-- Prevent users from opting out once enabled -->
         <key>KFMBlockOptOut</key>

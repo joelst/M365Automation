@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Blocks Intune export artefacts from being committed.
+#
+# .gitignore stops these files being staged by accident, but it does not stop
+# `git add -f`, and it does not protect a clone whose .gitignore is missing or
+# has drifted. This hook is the backstop: it inspects what is actually staged.
+#
+# Enable it (per clone, one command):
+#
+#     git config core.hooksPath .githooks
+#
+# To commit a blocked file deliberately, review it first, then:
+#
+#     git commit --no-verify
+#
+# What it blocks and why:
+#   *.payload.xml      decoded mobileconfig plists - can carry certificate
+#                      material, Wi-Fi/VPN secrets and embedded credentials
+#   *.assignments.json resolved assignment targets - group names, dynamic
+#                      membership rules, user display names and UPNs
+#   export roots       manifest, consolidated export, filter and scope-tag
+#                      catalogues, generated overlap reports
+#   exports/           the whole export tree, wherever it was written
+
+set -u
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+blocked=$(printf '%s\n' "$staged" | grep -E \
+  -e '(^|/)exports/' \
+  -e '\.payload\.xml$' \
+  -e '\.assignments\.json$' \
+  -e '(^|/)consolidated-config-profiles\.json$' \
+  -e '(^|/)export-manifest\.json$' \
+  -e '(^|/)setting-definitions\.json$' \
+  -e '(^|/)assignment-filters\.json$' \
+  -e '(^|/)role-scope-tags\.json$' \
+  -e '(^|/)policy-overlap-report\.(json|md|txt)$' \
+  || true)
+
+if [ -n "$blocked" ]; then
+  echo ''
+  echo 'COMMIT BLOCKED: Intune export artefacts are staged.'
+  echo ''
+  echo 'These files can contain decoded configuration payloads (certificates,'
+  echo 'credentials) and resolved assignment targets (group names, UPNs).'
+  echo 'They are generated output and do not belong in the repository.'
+  echo ''
+  printf '%s\n' "$blocked" | sed 's/^/    /'
+  echo ''
+  echo 'Unstage them with:'
+  echo ''
+  printf '%s\n' "$blocked" | sed 's/^/    git restore --staged /'
+  echo ''
+  echo 'If you have reviewed the contents and this is genuinely intended,'
+  echo 'bypass with: git commit --no-verify'
+  echo ''
+  exit 1
+fi
+
+exit 0

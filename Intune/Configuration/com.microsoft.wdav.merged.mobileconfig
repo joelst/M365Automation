@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1">
+    <dict>
+        <key>PayloadUUID</key>
+        <string>0E6D317F-9634-42C6-89C4-4B240D2B780B</string>
+        <key>PayloadType</key>
+        <string>Configuration</string>
+        <key>PayloadOrganization</key>
+        <string>Your Organization</string>
+        <!-- Unique GUID, NOT 'com.microsoft.wdav'. Using the preference domain as the
+             top-level identifier is what made the two source profiles collide. -->
+        <key>PayloadIdentifier</key>
+        <string>0E6D317F-9634-42C6-89C4-4B240D2B780B</string>
+        <key>PayloadDisplayName</key>
+        <string>Microsoft Defender for Endpoint settings</string>
+        <key>PayloadDescription</key>
+        <string>Merged Defender preferences: Microsoft recommended baseline plus removable-media device control.</string>
+        <key>PayloadVersion</key>
+        <integer>1</integer>
+        <key>PayloadEnabled</key>
+        <true/>
+        <key>PayloadRemovalDisallowed</key>
+        <true/>
+        <key>PayloadScope</key>
+        <string>System</string>
+        <key>PayloadContent</key>
+        <array>
+            <dict>
+                <key>PayloadUUID</key>
+                <string>0C7F66B7-055E-423F-87E3-B8D710A5120D</string>
+                <key>PayloadType</key>
+                <string>com.microsoft.wdav</string>
+                <key>PayloadOrganization</key>
+                <string>Your Organization</string>
+                <key>PayloadIdentifier</key>
+                <string>0C7F66B7-055E-423F-87E3-B8D710A5120D</string>
+                <key>PayloadDisplayName</key>
+                <string>Microsoft Defender for Endpoint configuration settings</string>
+                <key>PayloadDescription</key>
+                <string/>
+                <key>PayloadVersion</key>
+                <integer>1</integer>
+                <key>PayloadEnabled</key>
+                <true/>
+
+                <!-- macOS 27: the capability Endpoint DLP uses for browser and website
+                     visibility moved out of Accessibility and into Device Control and Data
+                     Access, and Apple lets the USER switch it off even though it is deployed
+                     by MDM. There is no way to prevent that.
+
+                     What we can decide is what happens next. With enforce, a Mac whose user
+                     revokes the permission has Safari, Chrome and Firefox treated as
+                     restricted destinations and the most restrictive matching policy applied,
+                     so revoking visibility costs the user those browsers rather than costing
+                     the company its data. Microsoft Edge is unaffected either way.
+
+                     Both keys default to enforce. They are set explicitly here because the
+                     primary DLP control should not rest on an undeclared default.
+
+                     Requires Endpoint DLP client 101.26072 or later; older clients ignore it. -->
+                <key>accessibility</key>
+                <dict>
+                    <key>enforcement</key>
+                    <dict>
+                        <key>unallowedBrowserMode</key>
+                        <string>enforce</string>
+                        <key>pasteToBrowserMode</key>
+                        <string>enforce</string>
+                    </dict>
+                </dict>
+                <!-- From 'macOS: Enable Defender Tamper Protection' (Microsoft recommended baseline) -->
+                <key>antivirusEngine</key>
+                <dict>
+                    <key>enforcementLevel</key>
+                    <string>real_time</string>
+                    <key>threatTypeSettings</key>
+                    <array>
+                        <dict>
+                            <key>key</key>
+                            <string>potentially_unwanted_application</string>
+                            <key>value</key>
+                            <string>block</string>
+                        </dict>
+                        <dict>
+                            <key>key</key>
+                            <string>archive_bomb</string>
+                            <key>value</key>
+                            <string>audit</string>
+                        </dict>
+                    </array>
+                </dict>
+                <key>cloudService</key>
+                <dict>
+                    <key>enabled</key>
+                    <true/>
+                    <key>automaticSampleSubmission</key>
+                    <true/>
+                    <key>automaticDefinitionUpdateEnabled</key>
+                    <true/>
+                    <!-- Present in Microsoft's recommended profile, absent from yours -->
+                    <key>definitionUpdateDue</key>
+                    <integer>7</integer>
+                </dict>
+                <key>tamperProtection</key>
+                <dict>
+                    <key>enforcementLevel</key>
+                    <string>block</string>
+                </dict>
+
+                <!-- From 'macOS: Block program execution from removable media' -->
+                <key>deviceControl</key>
+                <dict>
+                    <key>removableMediaPolicy</key>
+                    <dict>
+                        <key>enforcementLevel</key>
+                        <string>block</string>
+                        <key>permission</key>
+                        <array>
+                            <string>read</string>
+                            <string>write</string>
+                        </array>
+                    </dict>
+                </dict>
+            </dict>
+        </array>
+    </dict>
+</plist>

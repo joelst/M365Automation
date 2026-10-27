@@ -1,0 +1,64 @@
+misc/PsExec.exe
+misc/PsExec64.exe
+__azurite_db_blob__.json
+__azurite_db_blob_extent__.json
+.github/copilot-instructions.md
+.vscode/settings.json
+Intune/Proactive/BugCheck/.vscode/launch.json
+
+# ---------------------------------------------------------------------------
+# Intune policy exports - never commit.
+#
+# Export-DeviceConfigurations.ps1 writes decoded mobileconfig payloads
+# (.payload.xml) which can contain certificate material and embedded
+# credentials, plus assignment files naming groups and users. These patterns
+# are deliberately path-independent so the protection survives someone moving
+# the exports folder.
+#
+# This is what lets the TOOLING under Intune/Configuration/ be tracked. That
+# directory used to be ignored wholesale, which kept the exports out but took
+# every script with them -- the entire export/analyse/rename toolkit existed
+# only on one machine. The rules below exclude the generated output rather than
+# the directory that produces it.
+# ---------------------------------------------------------------------------
+
+# Export output trees, wherever they land
+exports/
+**/exports/
+
+# Decoded custom-profile payloads (mobileconfig plists, OMA-URI XML)
+*.payload.xml
+
+# Resolved assignment targets (group names, membership rules, UPNs)
+*.assignments.json
+
+# Export root artefacts
+consolidated-config-profiles.json
+export-manifest.json
+setting-definitions.json
+assignment-filters.json
+role-scope-tags.json
+
+# Generated analysis reports
+policy-overlap-report.json
+policy-overlap-report.md
+policy-overlap-report.txt
+
+# Generated naming worksheets and the rename audit trail. These carry live
+# policy names and assignment targets, so they are output, not source.
+policy-name-proposal.csv
+rename-map-*.csv
+
+# ---------------------------------------------------------------------------
+# Binaries and packaged artefacts.
+#
+# Not source, and in several cases larger than GitHub will accept at all:
+# Install-ClaudeMSIX.intunewin is ~490 MB and each .msix around 250 MB against
+# a 100 MB per-file limit. They are vendor installers and build outputs, and
+# belong in a release or a package feed rather than in git history, where they
+# cannot be removed again without rewriting it.
+# ---------------------------------------------------------------------------
+*.msix
+*.intunewin
+*.exe
+*.log
