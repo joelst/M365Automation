@@ -367,9 +367,9 @@ if (-not $SkipKextOverride) {
 
   try {
 
-  $profile = Invoke-Graph -method GET -uri "$graphBase/deviceManagement/deviceConfigurations/$KextProfileId"
-  $profileName = "$(Get-GraphProperty -InputObject $profile -name 'displayName')"
-  $encoded = "$(Get-GraphProperty -InputObject $profile -name 'payload')"
+  $liveProfile = Invoke-Graph -method GET -uri "$graphBase/deviceManagement/deviceConfigurations/$KextProfileId"
+  $profileName = "$(Get-GraphProperty -InputObject $liveProfile -name 'displayName')"
+  $encoded = "$(Get-GraphProperty -InputObject $liveProfile -name 'payload')"
   if (-not $encoded) { throw "Profile $KextProfileId has no payload." }
 
   Write-Output "  profile : $profileName"
@@ -377,7 +377,6 @@ if (-not $SkipKextOverride) {
   $decoded = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
 
   $needle = '<key>AllowUserOverrides</key><true/>'
-  $needleSpaced = "<key>AllowUserOverrides</key>`n`t`t<true/>"
   $hits = ([regex]::Matches($decoded, [regex]::Escape($needle))).Count
 
   if ($hits -eq 0) {
@@ -416,7 +415,7 @@ if (-not $SkipKextOverride) {
     if ($PSCmdlet.ShouldProcess($profileName, 'Set AllowUserOverrides to false')) {
       $reencoded = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($updated))
       Invoke-Graph -method PATCH -uri "$graphBase/deviceManagement/deviceConfigurations/$KextProfileId" `
-        -body @{ '@odata.type' = "$(Get-GraphProperty -InputObject $profile -name '@odata.type')"; payload = $reencoded } | Out-Null
+        -body @{ '@odata.type' = "$(Get-GraphProperty -InputObject $liveProfile -name '@odata.type')"; payload = $reencoded } | Out-Null
 
       $verify = Invoke-Graph -method GET -uri "$graphBase/deviceManagement/deviceConfigurations/$KextProfileId"
       $verifyDecoded = [System.Text.Encoding]::UTF8.GetString(
